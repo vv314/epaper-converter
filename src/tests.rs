@@ -1,0 +1,76 @@
+use crate::cli::{DitherMode, ResizeMode};
+use crate::pipeline::{check_epaper_format, choose_dither_mode, resize_with_mode};
+use crate::quantize::PALETTE;
+use image::{DynamicImage, ImageBuffer, Rgb};
+use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+fn temp_file_path(name: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    std::env::temp_dir().join(format!("epaper_converter_{name}_{nanos}.png"))
+}
+
+#[test]
+fn contain_mode_pads_with_white_background() {
+    let src = DynamicImage::ImageRgb8(ImageBuffer::from_pixel(4, 2, Rgb([0, 0, 0])));
+    let resized = resize_with_mode(&src, 8, 8, ResizeMode::Contain);
+
+    assert_eq!(resized.dimensions(), (8, 8));
+    assert_eq!(resized.get_pixel(0, 0).0, [255, 255, 255]);
+    assert_eq!(resized.get_pixel(4, 4).0, [0, 0, 0]);
+}
+
+#[test]
+fn cover_mode_fills_target_size() {
+    let src = DynamicImage::ImageRgb8(ImageBuffer::from_fn(10, 4, |x, _| {
+        if x < 5 {
+            Rgb([255, 0, 0])
+        } else {
+            Rgb([0, 0, 255])
+        }
+    }));
+    let resized = resize_with_mode(&src, 8, 8, ResizeMode::Cover);
+
+    assert_eq!(resized.dimensions(), (8, 8));
+}
+
+#[test]
+fn auto_strategy_prefers_fast_for_flat_image() {
+    let img = ImageBuffer::from_pixel(64, 64, Rgb([255, 255, 255]));
+    assert_eq!(choose_dither_mode(&img), DitherMode::Fast);
+}
+
+#[test]
+fn auto_strategy_prefers_floyd_for_complex_image() {
+    let img = ImageBuffer::from_fn(128, 128, |x, y| {
+        Rgb([(x * 2) as u8, (y * 2) as u8, ((x + y) % 256) as u8])
+    });
+    assert_eq!(choose_dither_mode(&img), DitherMode::Floyd);
+}
+
+#[test]
+fn check_accepts_valid_epaper_image() {
+    let path = temp_file_path("valid");
+    let img = ImageBuffer::from_pixel(800, 480, Rgb(PALETTE[0]));
+    img.save(&path).unwrap();
+
+    let result = check_epaper_format(&path, false).unwrap();
+    let _ = std::fs::remove_file(&path);
+
+    assert!(result);
+}
+
+#[test]
+fn check_rejects_wrong_resolution() {
+    let path = temp_file_path("wrong_size");
+    let img = ImageBuffer::from_pixel(16, 16, Rgb(PALETTE[0]));
+    img.save(&path).unwrap();
+
+    let result = check_epaper_format(&path, false).unwrap();
+    let _ = std::fs::remove_file(&path);
+
+    assert!(!result);
+}
