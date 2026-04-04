@@ -1,5 +1,7 @@
 use crate::cli::{DitherMode, ResizeMode};
-use crate::pipeline::{check_epaper_format, choose_dither_mode, resize_with_mode};
+use crate::pipeline::{
+    check_epaper_format, choose_dither_mode, indices_to_packed_buffer, resize_with_mode,
+};
 use crate::quantize::PALETTE;
 use image::{DynamicImage, ImageBuffer, Rgb};
 use std::path::PathBuf;
@@ -73,4 +75,16 @@ fn check_rejects_wrong_resolution() {
     let _ = std::fs::remove_file(&path);
 
     assert!(!result);
+}
+
+#[test]
+fn packed_buffer_matches_driver_color_encoding() {
+    let packed = indices_to_packed_buffer(&[0, 1, 2, 3, 4, 5]).unwrap();
+    assert_eq!(packed, vec![0x01, 0x32, 0x56]);
+}
+
+#[test]
+fn packed_buffer_rejects_odd_pixel_count() {
+    let err = indices_to_packed_buffer(&[0, 1, 2]).unwrap_err();
+    assert!(err.to_string().contains("even number of pixels"));
 }

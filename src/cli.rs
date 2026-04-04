@@ -6,7 +6,7 @@ use std::time::Instant;
 
 use crate::pipeline::{
     check_epaper_format, choose_dither_mode, indices_to_rgb_image, prepare_image, resize_with_mode,
-    save_bin_buffer,
+    save_bin_buffer, save_packed_buffer,
 };
 use crate::quantize::{quantize_dithered, quantize_fast};
 
@@ -103,6 +103,8 @@ enum OutputFormat {
     /// Raw binary buffer - one byte per pixel (0-5), directly usable by display
     #[default]
     Bin,
+    /// Packed 4-bit display buffer - two pixels per byte, ready for Waveshare driver display()
+    Packed,
     /// PNG image
     Png,
     /// Both BMP and BIN
@@ -179,6 +181,9 @@ pub fn run() -> Result<()> {
                 }
                 OutputFormat::Bin => {
                     save_bin_buffer(&indices, output_path)?;
+                }
+                OutputFormat::Packed => {
+                    save_packed_buffer(&indices, output_path)?;
                 }
                 OutputFormat::Png => {
                     let rgb_out = indices_to_rgb_image(&indices, width, height);
