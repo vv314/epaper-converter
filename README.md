@@ -1,27 +1,21 @@
 # epaper-converter
 
-面向树莓派墨水屏相框的高性能图片转换工具，使用 Rust 实现，目标面板为 `Waveshare 7.3inch e-Paper E`（ACeP 六色）。
+面向树莓派墨水屏的高性能图片转换工具，基于 Rust 实现。默认针对 `Waveshare 7.3inch e-Paper E`（ACeP 六色）面板设计。
 
-它负责把常见图片快速转换成墨水屏可直接消费的目标格式：固定分辨率、固定六色调色板，以及适合驱动侧使用的原始缓冲区。
+核心功能是将通用图片预处理为墨水屏驱动可直接写入的 Raw Buffer（固定分辨率及六色调色板映射），从而将图像计算负载从驱动中剥离。
 
-## 项目目标
+## 特性与目标
 
-- 将通用图片转换为墨水屏目标格式，降低驱动侧处理成本。
-- 用 Rust 替代 Python 热路径，提升树莓派上的处理性能。
-- 为相框场景提供可脚本化的 CLI，便于批量生成预览图或显示缓冲区。
+- **驱动解耦**：将缩放与量化前置，驱动脚本仅需处理单纯的硬件通信。
+- **高性能**：基于 Rust 开发，在低功耗 ARM 设备上提供远超 Python 的处理速度。
+- **CLI 友好**：提供标准命令行接口，便于相框等自动化项目以脚本集成。
 
-## 目标硬件
+## 面板约束
 
-### 适用墨水屏规格
-
-当前实现针对以下面板约束编写：
-
-- 面板：`Waveshare 7.3inch e-Paper E`
-- 分辨率：`800x480`
-- 调色板：`Black / White / Red / Yellow / Blue / Green`
-- 输出语义：每像素一个调色板索引值，适合后续驱动层直接消费
-
-调色板索引映射如下：
+- **型号**：`Waveshare 7.3inch e-Paper E`
+- **分辨率**：`800x480`
+- **调色板**：Black, White, Red, Yellow, Blue, Green
+- **输出编码**：每像素 1 字节（值范围 `0..5`），无缝对接驱动数组。
 
 | 索引 | 颜色   | RGB           |
 | ---- | ------ | ------------- |
@@ -34,220 +28,108 @@
 
 ## 功能概览
 
-- 固定输出到目标分辨率 `800x480`
-- 使用 `Lanczos3` 做缩放
-- 支持三种量化模式：快速模式、Floyd-Steinberg 抖动模式、自适应模式
-- 支持三种缩放策略：`stretch`、`contain`、`cover`
-- 支持按 EXIF 自动旋转照片方向
-- 支持输出 `BMP`、`PNG`、`BIN` 或同时输出 `BMP + BIN`
-- 支持检测图片是否已经符合墨水屏格式
-- 支持基础 benchmark，方便比较不同模式耗时
+- 使用 `Lanczos3` 进行高质量缩放。
+- 支持三种量化模式：`fast`（就近查找）、`floyd`（Floyd-Steinberg 抖动）、`auto`（自适应）。
+- 支持三种缩放策略：`contain`（等比留白）、`cover`（中心裁剪铺满）、`stretch`（强制拉伸）。
+- 默认读取 EXIF 信息校正图像方向。
+- **输入支持**：`JPEG`, `PNG`, `BMP`。
+- **输出支持**：
+  - `BIN`：每像素 1 字节 Raw Buffer
+  - `PACKED`：针对微雪驱动优化的 4-bit 紧凑编码，每字节存两像素，直接入参 `epd.display()`
+  - `BMP` / `PNG`：六色量化预览图
+  - `BOTH`：组合输出（`BIN` + `BMP`）
 
-## 支持的输入格式
-
-当前编译配置启用了以下输入/输出编解码能力：
-
-- `PNG`
-- `JPEG`
-- `BMP`
-- `TGA`
-
-## 构建
-
-## Quick Start
+## 快速开始
 
 ```bash
 cargo build --release
-./target/release/epaper_converter convert input.jpg output.bin -f bin -d auto --resize-mode contain
+epaper_converter convert input.jpg output.bin -f bin -d auto --resize-mode contain
 ```
 
-如果要部署到树莓派，推荐使用静态交叉编译并直接上传：
+对于树莓派部署，推荐使用静态交叉编译：
 
 ```bash
 cargo build-linux-arm64-musl
-scp target/aarch64-unknown-linux-musl/release/epaper_converter pi@<raspberry-pi-ip>:/tmp/epaper_converter
+scp target/aarch64-unknown-linux-musl/release/epaper_converter pi@<ip>:/usr/local/bin/epaper_converter
 ```
-
-### 本机构建
-
-```bash
-cargo build --release
-```
-
-产物路径：
-
-```bash
-target/release/epaper_converter
-```
-
-### 交叉编译到树莓派 arm64
-
-README 推荐统一使用静态发布方式，避免目标机 `glibc` 版本差异带来的运行时问题：
-
-```bash
-cargo build-linux-arm64-musl
-```
-
-该别名映射到：
-
-```bash
-cargo zigbuild --release --target aarch64-unknown-linux-musl
-```
-
-适用范围：
-
-- 产物为静态链接二进制，不依赖目标机 `glibc`
-- 更适合树莓派相框这类“拷贝即运行”的部署方式
-- 仍然要求目标系统是 **64 位** `aarch64` Linux
-- 不适用于 32 位树莓派系统，如 `armv7` / `armhf`
-
-产物路径：
-
-```bash
-target/aarch64-unknown-linux-musl/release/epaper_converter
-```
-
-可以直接通过 `scp` 上传到树莓派，例如：
-
-```bash
-scp target/aarch64-unknown-linux-musl/release/epaper_converter pi@<raspberry-pi-ip>:/tmp/epaper_converter
-```
-
-已在 `Raspberry Pi Zero 2 W Rev 1.0` + `Debian 12 (bookworm) aarch64` 上验证可执行。
-
-如果你明确希望使用依赖系统运行时的动态链接版本，也可以使用：
-
-```bash
-cargo build-linux-arm64
-```
-
-但对当前这个项目，通常没有必要把它作为 README 的主路径展开说明。
-
-### 构建依赖
-
-上述交叉编译方式都依赖以下工具：
-
-- `cargo-zigbuild`
-- `zig`
 
 ## 命令行用法
 
-### 查看帮助
+### 图片转换 (`convert`)
 
 ```bash
-cargo run -- --help
+epaper_converter convert input.jpg output.bin -f bin -d floyd
 ```
 
-### 1) 转换图片
+**核心参数**：
+
+- `-w, --width` / `-H, --height`：目标分辨率（默认 `800x480`）。
+- `-d, --dither`：量化/抖动模式（默认 `floyd`）。
+  - `fast`：无抖动，速度最快。**适合插画、UI设计稿或纯色块较多的图像**。
+  - `floyd`：误差扩散抖动，画质好。**适合真实照片、人像、风景等色彩层次丰富的图像**。
+  - `auto`：根据图像色彩复杂度智能选择，兼顾性能与画质。
+- `--resize-mode`：缩放策略（`contain`, `cover`, `stretch`，默认 `contain`）。
+- `-f, --format`：输出格式（`bmp`, `bin`, `packed`, `png`, `both`）。
+- `-b, --benchmark`：打印处理耗时。
+
+**常见场景**：
+
+- **照片转换**（等比留白 + 自适应抖动）：
+  ```bash
+  epaper_converter convert photo.jpg frame.bin -f bin -d auto --resize-mode contain
+  ```
+- **壁纸转换**（中心裁剪铺满）：
+  ```bash
+  epaper_converter convert photo.jpg cover.bmp -f bmp --resize-mode cover
+  ```
+- **快速生成预览图**：
+  ```bash
+  epaper_converter convert photo.jpg preview.bmp -f bmp -d fast
+  ```
+
+### 格式检查 (`check`)
+
+验证图像分辨率是否为 `800x480` 且所有像素均符合六色调色板约束。
 
 ```bash
-cargo run --release -- convert input.jpg output.bin -f bin -d floyd
+epaper_converter check preview.bmp --verbose
 ```
 
-常用参数：
+**退出码**：
 
-- `-w, --width`：目标宽度，默认 `800`
-- `-H, --height`：目标高度，默认 `480`
-- `-d, --dither`：抖动模式，`fast` / `floyd` / `auto`，默认 `floyd`
-- `--resize-mode`：缩放策略，`contain` / `cover` / `stretch`，默认 `contain`
-- `--auto-rotate`：是否按 EXIF 自动旋转，默认 `true`
-- `-f, --format`：输出格式，`bmp` / `bin` / `png` / `both`
-- `-b, --benchmark`：打印加载、转换、保存耗时
+- `0`: 验证通过。
+- `1`: 不符合面板约束，需重新转换。
+- `2`: 文件读取错误。
 
-示例：
+### 性能基准测试 (`benchmark`)
+
+评估当前设备上的转换耗时（包括 fast/floyd 模式及反向 RGB 生成）。
 
 ```bash
-./target/release/epaper_converter convert photo.jpg frame.bin -f bin -d floyd -b
+epaper_converter benchmark photo.jpg
 ```
 
-相册照片通常更适合使用自动策略，并保留原始宽高比：
+## 产物说明
+
+- **`bin`**：1 Byte / Pixel。大小固定为 `384,000` 字节（针对 800x480），逐字节存放像素索引（`0..5`）。
+- **`packed`**：4 Bits / Pixel（紧凑编码）。大小固定为 `192,000` 字节，每 2 个像素压入 1 字节中。**如果使用微雪官方 Python/C 驱动的 `epd.display(buf)`，请选用此格式以消除驱动内转换开销。**
+- **`bmp` / `png`**：用于调试或 Web 端预览，图像已被强行量化为六色。
+- **`both`**：同时生成 `.bin` 与 `.bmp`，兼顾实机刷屏与后台预览。
+
+## 架构最佳实践
+
+- **流水线解耦**：推荐作为预处理节点独立运行（如相框系统选图后立即异步转换），驱动侧仅读取生成好的 `.bin` 执行单向 SPI 通信，避免在单线程驱动中阻塞计算。
+- **硬件扩展性**：当前调色板及相关约束硬编码面向 Waveshare 7.3inch ACeP。若需适配其余面板，需修改源码中的调色板映射表与默认分辨率。
+
+## 交叉编译指南
+
+交叉编译至 ARM64 依赖 `cargo-zigbuild` 与 `zig` 编译器。目标系统必须为 64 位 (`aarch64`)，不支持 `armv7` 等 32 位系统。
 
 ```bash
-./target/release/epaper_converter convert photo.jpg frame.bin -f bin -d auto --resize-mode contain
+# 静态链接（推荐，无 glibc 依赖）
+cargo build-linux-arm64-musl
+# 等效于：cargo zigbuild --release --target aarch64-unknown-linux-musl
+
+# 动态链接
+cargo zigbuild --release --target aarch64-unknown-linux-gnu
 ```
-
-如果只想快速得到预览图：
-
-```bash
-./target/release/epaper_converter convert photo.jpg preview.bmp -f bmp -d fast
-```
-
-如果希望铺满屏幕并接受中心裁剪：
-
-```bash
-./target/release/epaper_converter convert photo.jpg cover.bmp -f bmp --resize-mode cover
-```
-
-### 2) 检查图片是否已经符合墨水屏格式
-
-```bash
-./target/release/epaper_converter check preview.bmp --verbose
-```
-
-检查逻辑包括：
-
-- 分辨率是否为 `800x480`
-- 像素是否全部落在六色调色板内
-
-退出码语义：
-
-- `0`：已符合墨水屏格式
-- `1`：需要重新转换
-- `2`：输入文件或读取过程出错
-
-### 3) 跑基准测试
-
-```bash
-./target/release/epaper_converter benchmark photo.jpg
-```
-
-它会输出：
-
-- `fast` 模式耗时
-- `floyd` 模式耗时
-- 索引图转 RGB 预览图的耗时
-
-## 输出格式说明
-
-### `bin`
-
-- 每个像素占 `1` 字节
-- 字节值范围为 `0..5`
-- 在 `800x480` 下，总大小固定为 `384000` 字节
-- 适合驱动层直接读取并映射到面板颜色
-
-### `bmp` / `png`
-
-- 适合预览与人工验收
-- 图像已经被量化到六色调色板
-
-### `both`
-
-当使用：
-
-```bash
-./target/release/epaper_converter convert photo.jpg output.any -f both
-```
-
-程序会输出：
-
-- `output.bmp`
-- `output.bin`
-
-## 当前边界
-
-- 当前实现固定面向 `800x480` 六色面板，不是通用多型号框架
-- 缩放使用 `resize_exact`，会强制拉伸到目标尺寸，不做裁剪或留白
-- 工具只负责“图片转换”，不负责直接通过 SPI 刷屏
-- 若后续接入其它面板，通常需要同时调整分辨率、调色板与驱动侧协议
-
-## 适合相框项目的接入方式
-
-推荐把这个工具放在“图片准备阶段”而不是“刷屏阶段”：
-
-1. 上层逻辑选择待展示图片
-2. 调用 `epaper_converter convert ... -f bin`
-3. 驱动层读取 `.bin` 并发送到墨水屏
-4. 可选保留 `bmp/png` 作为调试预览输出
-
-这样可以把“图像处理成本”和“硬件通信成本”分层，便于分别优化。
