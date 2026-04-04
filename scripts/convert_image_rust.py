@@ -42,6 +42,15 @@ def ensure_binary():
         print(f"Searched in: {[str(p) for p in POSSIBLE_BINARIES]}", file=sys.stderr)
         sys.exit(1)
 
+def infer_format(output_path: str) -> str:
+    suffix = Path(output_path).suffix.lower()
+    return {
+        '.bin': 'bin',
+        '.packed': 'packed',
+        '.png': 'png',
+        '.bmp': 'bmp',
+    }.get(suffix, 'bmp')
+
 def convert_image(input_path: str, output_path: str, width: int = 800, height: int = 480, dithering: bool = True):
     """
     Convert an image to e-paper compatible format (Rust optimized).
@@ -60,10 +69,10 @@ def convert_image(input_path: str, output_path: str, width: int = 800, height: i
         "convert",
         input_path,
         output_path,
+        "-f", infer_format(output_path),
     ]
 
-    if not dithering:
-        cmd.append("--no-dither")
+    cmd.extend(["-d", "floyd" if dithering else "fast"])
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -142,6 +151,10 @@ def main():
         help='Save raw buffer file (.bin)'
     )
     parser.add_argument(
+        '--format', choices=['bmp', 'bin', 'packed', 'png', 'both'],
+        help='Output format (default: infer from output extension)'
+    )
+    parser.add_argument(
         '--benchmark', action='store_true',
         help='Show processing time'
     )
@@ -165,10 +178,10 @@ def main():
             args.output,
             "-w", str(args.width),
             "-H", str(args.height),
+            "-f", args.format or infer_format(args.output),
         ]
 
-        if args.no_dithering:
-            cmd.append("--no-dither")
+        cmd.extend(["-d", "fast" if args.no_dithering else "floyd"])
 
         result = subprocess.run(cmd)
 
