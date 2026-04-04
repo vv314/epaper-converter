@@ -62,7 +62,7 @@ def convert_to_packed(image_path: str, *, dither: str, resize_mode: str, benchma
     return tmp_path
 
 
-def display_packed_buffer(packed_path: Path) -> None:
+def display_packed_buffer(packed_path: Path, *, clear: bool = False) -> None:
     packed = packed_path.read_bytes()
     if len(packed) != PACKED_SIZE:
         raise ValueError(f'Invalid packed buffer size: {len(packed)} (expected {PACKED_SIZE})')
@@ -73,12 +73,21 @@ def display_packed_buffer(packed_path: Path) -> None:
     print(f'Loaded packed buffer: {packed_path} ({len(packed)} bytes)')
     epd = epd7in3e.EPD()
     epd.init()
-    epd.Clear()
+    if clear:
+        print('Clearing panel before display ...')
+        epd.Clear()
     epd.display(packed)
     epd.sleep()
 
 
-def display_image(image_path: str, *, dither: str = 'auto', resize_mode: str = 'contain', benchmark: bool = False) -> None:
+def display_image(
+    image_path: str,
+    *,
+    dither: str = 'auto',
+    resize_mode: str = 'contain',
+    benchmark: bool = False,
+    clear: bool = False,
+) -> None:
     start = time.perf_counter()
     print(f'Loading image: {image_path}')
     temp_path: Path | None = None
@@ -94,7 +103,7 @@ def display_image(image_path: str, *, dither: str = 'auto', resize_mode: str = '
             temp_path = packed_path
 
         print('Initializing e-paper display ...')
-        display_packed_buffer(packed_path)
+        display_packed_buffer(packed_path, clear=clear)
 
         total = time.perf_counter() - start
         print(f'Display completed in {total:.2f}s')
@@ -120,6 +129,7 @@ def main() -> None:
     parser.add_argument('--floyd', action='store_true', help='Shortcut for --dither floyd')
     parser.add_argument('--resize-mode', choices=['stretch', 'contain', 'cover'], default='contain', help='Resize strategy during conversion')
     parser.add_argument('--benchmark', action='store_true', help='Print converter benchmark timing')
+    parser.add_argument('--clear', action='store_true', help='Clear panel before display (disabled by default)')
     args = parser.parse_args()
 
     if not os.path.exists(args.image):
@@ -132,7 +142,13 @@ def main() -> None:
     if args.floyd:
         dither = 'floyd'
 
-    display_image(args.image, dither=dither, resize_mode=args.resize_mode, benchmark=args.benchmark)
+    display_image(
+        args.image,
+        dither=dither,
+        resize_mode=args.resize_mode,
+        benchmark=args.benchmark,
+        clear=args.clear,
+    )
 
 
 if __name__ == '__main__':

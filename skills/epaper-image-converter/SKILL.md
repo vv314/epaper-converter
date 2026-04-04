@@ -51,12 +51,17 @@ description: Convert and display images for Waveshare 7.3inch e-Paper E by calli
 如果传入的是刚才生成的 `output.packed`，它将直接通过 SPI 透传，跳过所有重复解析耗时。
 如果传入的是原始图片 `photo.jpg`，它也会在内部调用 `epaper_converter` 先转为 `packed` 再执行发送。
 
+默认情况下，`show_on_screen.py` **不会先执行整屏 `Clear()`**，以避免多做一次完整刷新；如果你确实需要先清屏再显示，可以显式加上 `--clear`。
+
 ```bash
 # 推荐：直接刷入上一步已准备好的 .packed 数据
 ./scripts/show_on_screen.py output.packed
 
 # 快捷方式：由脚本代劳转换并铺满刷屏
 ./scripts/show_on_screen.py photo.jpg --floyd --resize-mode cover
+
+# 如需恢复“先清屏再显示”的旧行为，可手动开启
+./scripts/show_on_screen.py photo.jpg --floyd --resize-mode cover --clear
 ```
 
 ## `convert` 命令参数一览
