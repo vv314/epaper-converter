@@ -51,7 +51,7 @@ def infer_format(output_path: str) -> str:
         '.bmp': 'bmp',
     }.get(suffix, 'bmp')
 
-def convert_image(input_path: str, output_path: str, width: int = 800, height: int = 480, dithering: bool = True):
+def convert_image(input_path: str, output_path: str, width: int = 800, height: int = 480, halftone: str = 'auto'):
     """
     Convert an image to e-paper compatible format (Rust optimized).
 
@@ -60,7 +60,7 @@ def convert_image(input_path: str, output_path: str, width: int = 800, height: i
         output_path: Path to save converted image
         width: Target width (default 800)
         height: Target height (default 480)
-        dithering: Enable Floyd-Steinberg dithering (default True)
+        halftone: Halftone algorithm (`bayer`, `atkinson`, `auto`)
     """
     ensure_binary()
 
@@ -72,7 +72,7 @@ def convert_image(input_path: str, output_path: str, width: int = 800, height: i
         "-f", infer_format(output_path),
     ]
 
-    cmd.extend(["-d", "floyd" if dithering else "fast"])
+    cmd.extend(["--halftone", halftone])
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -96,7 +96,7 @@ def create_display_buffer(image_path: str, width: int = 800, height: int = 480) 
 
     try:
         # Convert to e-paper format
-        convert_image(image_path, tmp_path, width, height, dithering=True)
+        convert_image(image_path, tmp_path, width, height, halftone='auto')
 
         # Load and convert to buffer
         img = Image.open(tmp_path).convert('RGB')
@@ -139,12 +139,8 @@ def main():
         help='Target height (default: 480)'
     )
     parser.add_argument(
-        '--no-dithering', action='store_true',
-        help='Disable dithering for faster processing'
-    )
-    parser.add_argument(
-        '--dithering', action='store_true',
-        help='Enable dithering (default: enabled)'
+        '--halftone', choices=['bayer', 'atkinson', 'auto'], default='auto',
+        help='Halftone algorithm (default: auto)'
     )
     parser.add_argument(
         '--buffer', action='store_true',
@@ -163,7 +159,7 @@ def main():
 
     print(f"Converting {args.input}...")
     print(f"Target size: {args.width}x{args.height}")
-    print(f"Dithering: {'off' if args.no_dithering else 'on'}")
+    print(f"Halftone: {args.halftone}")
     print(f"Engine: Rust (high-performance)")
 
     start = time.perf_counter()
@@ -181,7 +177,7 @@ def main():
             "-f", args.format or infer_format(args.output),
         ]
 
-        cmd.extend(["-d", "fast" if args.no_dithering else "floyd"])
+        cmd.extend(["--halftone", args.halftone])
 
         result = subprocess.run(cmd)
 

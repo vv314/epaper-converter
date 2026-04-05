@@ -5,10 +5,10 @@ use std::path::Path;
 use std::time::Instant;
 
 use crate::pipeline::{
-    check_epaper_format, choose_dither_mode, indices_to_rgb_image, prepare_image, resize_with_mode,
-    save_bin_buffer, save_packed_buffer,
+    check_epaper_format, choose_halftone_mode, indices_to_rgb_image, prepare_image,
+    resize_with_mode, save_bin_buffer, save_packed_buffer,
 };
-use crate::quantize::{quantize_dithered, quantize_fast};
+use crate::quantize::{quantize_atkinson, quantize_bayer};
 
 #[derive(Parser)]
 #[command(name = "epaper-converter")]
@@ -34,9 +34,9 @@ enum Commands {
         /// Target height (default: 480)
         #[arg(short = 'H', long, default_value = "480")]
         height: u32,
-        /// Dithering mode
-        #[arg(short, long, value_enum, default_value = "floyd")]
-        dither: DitherMode,
+        /// Halftone mode
+        #[arg(short = 'm', long = "halftone", value_enum, default_value = "bayer")]
+        halftone: HalftoneMode,
         /// Resize strategy for fitting image into the target canvas
         #[arg(long, value_enum, default_value = "contain")]
         resize_mode: ResizeMode,
@@ -75,13 +75,13 @@ enum Commands {
 }
 
 #[derive(Default, Clone, Copy, Debug, ValueEnum, PartialEq, Eq)]
-pub enum DitherMode {
-    /// No dithering - fastest, good for simple images
-    Fast,
-    /// Floyd-Steinberg dithering - better quality, slower
+pub enum HalftoneMode {
+    /// Bayer ordered dithering - cleaner and more stable on e-paper panels
     #[default]
-    Floyd,
-    /// Choose fast or floyd automatically based on image complexity
+    Bayer,
+    /// Atkinson dithering - sharper diffusion with less gray haze than Floyd
+    Atkinson,
+    /// Choose Bayer or Atkinson automatically based on image complexity
     Auto,
 }
 
@@ -112,11 +112,11 @@ enum OutputFormat {
 }
 
 #[inline(always)]
-fn dither_mode_label(mode: DitherMode) -> &'static str {
+fn halftone_mode_label(mode: HalftoneMode) -> &'static str {
     match mode {
-        DitherMode::Fast => "fast (no dithering)",
-        DitherMode::Floyd => "Floyd-Steinberg dithering",
-        DitherMode::Auto => "auto",
+        HalftoneMode::Bayer => "Bayer ordered dithering",
+        HalftoneMode::Atkinson => "Atkinson dithering",
+        HalftoneMode::Auto => "auto",
     }
 }
 
@@ -129,7 +129,7 @@ pub fn run() -> Result<()> {
             output,
             width,
             height,
-            dither,
+            halftone,
             resize_mode,
             auto_rotate,
             format,
@@ -147,24 +147,24 @@ pub fn run() -> Result<()> {
 
             let load_time = load_start.elapsed();
 
-            let resolved_dither = match dither {
-                DitherMode::Auto => choose_dither_mode(&rgb_img),
+            let resolved_halftone = match halftone {
+                HalftoneMode::Auto => choose_halftone_mode(&rgb_img),
                 mode => mode,
             };
 
             if !benchmark {
-                let mode_str = dither_mode_label(resolved_dither);
-                if dither == DitherMode::Auto {
-                    println!("Dither strategy: auto -> {}", mode_str);
+                let mode_str = halftone_mode_label(resolved_halftone);
+                if halftone == HalftoneMode::Auto {
+                    println!("Halftone strategy: auto -> {}", mode_str);
                 }
                 println!("Converting ({} mode)...", mode_str);
             }
             let convert_start = Instant::now();
 
-            let indices = match resolved_dither {
-                DitherMode::Fast => quantize_fast(&rgb_img, width, height),
-                DitherMode::Floyd => quantize_dithered(&rgb_img, width, height),
-                DitherMode::Auto => unreachable!(),
+            let indices = match resolved_halftone {
+                HalftoneMode::Bayer => quantize_bayer(&rgb_img, width, height),
+                HalftoneMode::Atkinson => quantize_atkinson(&rgb_img, width, height),
+                HalftoneMode::Auto => unreachable!(),
             };
 
             let convert_time = convert_start.elapsed();
@@ -254,34 +254,37 @@ pub fn run() -> Result<()> {
             let rgb_img = resize_with_mode(&img, width, height, ResizeMode::Stretch);
 
             let start = Instant::now();
-            let indices_fast = black_box(quantize_fast(&rgb_img, width, height));
-            let fast_time = start.elapsed();
+            let indices_bayer = black_box(quantize_bayer(&rgb_img, width, height));
+            let bayer_time = start.elapsed();
 
             let start = Instant::now();
-            black_box(quantize_dithered(&rgb_img, width, height));
-            let dither_time = start.elapsed();
+            black_box(quantize_atkinson(&rgb_img, width, height));
+            let atkinson_time = start.elapsed();
 
             let start = Instant::now();
-            let _rgb_out = indices_to_rgb_image(&indices_fast, width, height);
+            let _rgb_out = indices_to_rgb_image(&indices_bayer, width, height);
             let convert_time = start.elapsed();
 
             println!("=== Results ({}x{}) ===", width, height);
-            println!("Fast mode:     {:>8.2}ms", fast_time.as_secs_f64() * 1000.0);
             println!(
-                "Dither mode:   {:>8.2}ms",
-                dither_time.as_secs_f64() * 1000.0
+                "Bayer mode:    {:>8.2}ms",
+                bayer_time.as_secs_f64() * 1000.0
+            );
+            println!(
+                "Atkinson mode:{:>8.2}ms",
+                atkinson_time.as_secs_f64() * 1000.0
             );
             println!(
                 "RGB convert:   {:>8.2}ms",
                 convert_time.as_secs_f64() * 1000.0
             );
             println!(
-                "Total fast:    {:>8.2}ms",
-                (fast_time + convert_time).as_secs_f64() * 1000.0
+                "Total Bayer:  {:>8.2}ms",
+                (bayer_time + convert_time).as_secs_f64() * 1000.0
             );
             println!(
-                "Total dither: {:>8.2}ms",
-                (dither_time + convert_time).as_secs_f64() * 1000.0
+                "Total Atkinson:{:>8.2}ms",
+                (atkinson_time + convert_time).as_secs_f64() * 1000.0
             );
         }
     }

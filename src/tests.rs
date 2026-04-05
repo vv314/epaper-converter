@@ -1,8 +1,8 @@
-use crate::cli::{DitherMode, ResizeMode};
+use crate::cli::{HalftoneMode, ResizeMode};
 use crate::pipeline::{
-    check_epaper_format, choose_dither_mode, indices_to_packed_buffer, resize_with_mode,
+    check_epaper_format, choose_halftone_mode, indices_to_packed_buffer, resize_with_mode,
 };
-use crate::quantize::PALETTE;
+use crate::quantize::{quantize_atkinson, quantize_bayer, PALETTE};
 use image::{DynamicImage, ImageBuffer, Rgb};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -40,17 +40,48 @@ fn cover_mode_fills_target_size() {
 }
 
 #[test]
-fn auto_strategy_prefers_fast_for_flat_image() {
+fn auto_strategy_prefers_bayer_for_flat_image() {
     let img = ImageBuffer::from_pixel(64, 64, Rgb([255, 255, 255]));
-    assert_eq!(choose_dither_mode(&img), DitherMode::Fast);
+    assert_eq!(choose_halftone_mode(&img), HalftoneMode::Bayer);
 }
 
 #[test]
-fn auto_strategy_prefers_floyd_for_complex_image() {
+fn auto_strategy_prefers_bayer_for_smooth_gradient() {
+    let img = ImageBuffer::from_fn(64, 64, |x, _| {
+        let value = (x * 4).min(255) as u8;
+        Rgb([value, value, 255])
+    });
+    assert_eq!(choose_halftone_mode(&img), HalftoneMode::Bayer);
+}
+
+#[test]
+fn auto_strategy_prefers_atkinson_for_complex_image() {
     let img = ImageBuffer::from_fn(128, 128, |x, y| {
         Rgb([(x * 2) as u8, (y * 2) as u8, ((x + y) % 256) as u8])
     });
-    assert_eq!(choose_dither_mode(&img), DitherMode::Floyd);
+    assert_eq!(choose_halftone_mode(&img), HalftoneMode::Atkinson);
+}
+
+#[test]
+fn bayer_quantizer_preserves_dimensions_and_palette_range() {
+    let img = ImageBuffer::from_fn(16, 16, |x, y| {
+        Rgb([(x * 17) as u8, (y * 17) as u8, ((x + y) * 8) as u8])
+    });
+    let indices = quantize_bayer(&img, 16, 16);
+
+    assert_eq!(indices.len(), 16 * 16);
+    assert!(indices.iter().all(|&idx| idx < PALETTE.len() as u8));
+}
+
+#[test]
+fn atkinson_quantizer_preserves_dimensions_and_palette_range() {
+    let img = ImageBuffer::from_fn(16, 16, |x, y| {
+        Rgb([(x * 13) as u8, (y * 11) as u8, ((x * y) % 256) as u8])
+    });
+    let indices = quantize_atkinson(&img, 16, 16);
+
+    assert_eq!(indices.len(), 16 * 16);
+    assert!(indices.iter().all(|&idx| idx < PALETTE.len() as u8));
 }
 
 #[test]

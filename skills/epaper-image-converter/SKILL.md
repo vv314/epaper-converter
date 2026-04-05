@@ -32,10 +32,10 @@ description: Convert and display images for Waveshare 7.3inch e-Paper E by calli
 
 ```bash
 # 生成驱动可直接消费的 packed 紧凑编码文件，推荐使用 cover 策略铺满屏幕
-./scripts/epaper_converter convert input.jpg output.packed -f packed -d floyd --resize-mode cover
+./scripts/epaper_converter convert input.jpg output.packed -f packed --halftone atkinson --resize-mode cover
 
 # 如果想要预览转换后的呈现效果，可以额外输出 bmp
-./scripts/epaper_converter convert input.jpg preview.bmp -f bmp -d fast --resize-mode contain
+./scripts/epaper_converter convert input.jpg preview.bmp -f bmp --halftone bayer --resize-mode contain
 ```
 
 > **提示**：你可以通过检查命令验证某张图片是否已满足严格的墨水屏规格要求：
@@ -58,10 +58,10 @@ description: Convert and display images for Waveshare 7.3inch e-Paper E by calli
 ./scripts/show_on_screen.py output.packed
 
 # 快捷方式：由脚本代劳转换并铺满刷屏
-./scripts/show_on_screen.py photo.jpg --floyd --resize-mode cover
+./scripts/show_on_screen.py photo.jpg --halftone atkinson --resize-mode cover
 
 # 如需恢复“先清屏再显示”的旧行为，可手动开启
-./scripts/show_on_screen.py photo.jpg --floyd --resize-mode cover --clear
+./scripts/show_on_screen.py photo.jpg --halftone atkinson --resize-mode cover --clear
 ```
 
 ## `convert` 命令参数一览
@@ -70,10 +70,10 @@ description: Convert and display images for Waveshare 7.3inch e-Paper E by calli
 
 - `-w, --width`：目标宽度，默认 `800`
 - `-H, --height`：目标高度，默认 `480`
-- `-d, --dither`：抖动质量（量化算法）。
-  - `fast`：就近颜色替换，无抖动，速度最快。**适合插画、UI 设计稿、纯色块较多或自带点阵的图像**。
-  - `floyd`：Floyd-Steinberg 误差扩散抖动，速度稍慢。**适合真实照片、人像、风景等色彩层次丰富的图像**。
-  - `auto`：（默认选项）根据图像色彩复杂度智能选择，不知道选哪个时无脑用即可。
+- `-m, --halftone`：半色调算法。
+  - `bayer`：规则阈值矩阵抖动，默认方案，干净稳定。
+  - `atkinson`：更锐利的误差扩散，适合高复杂度图像。
+  - `auto`：（默认选项）根据图像复杂度在 `bayer` 与 `atkinson` 间自动选择。
 - `--resize-mode`：排版策略。`contain`（等比留白）, `cover`（裁剪填满）, `stretch`（无视比例拉伸）
 - `--auto-rotate true|false`：是否按 EXIF 自动旋转
 - `-f, --format`：输出文件格式。可选 `packed`, `bin`, `bmp`, `png`, `both`

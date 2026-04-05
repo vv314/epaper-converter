@@ -29,7 +29,7 @@
 ## 功能概览
 
 - 使用 `Lanczos3` 进行高质量缩放。
-- 支持三种量化模式：`fast`（就近查找）、`floyd`（Floyd-Steinberg 抖动）、`auto`（自适应）。
+- 支持三种半色调模式：`bayer`、`atkinson`、`auto`（自适应）。
 - 支持三种缩放策略：`contain`（等比留白）、`cover`（中心裁剪铺满）、`stretch`（强制拉伸）。
 - 默认读取 EXIF 信息校正图像方向。
 - **输入支持**：`JPEG`, `PNG`, `BMP`。
@@ -43,7 +43,7 @@
 
 ```bash
 cargo build --release
-epaper_converter convert input.jpg output.bin -f bin -d auto --resize-mode contain
+epaper_converter convert input.jpg output.bin -f bin --halftone auto --resize-mode contain
 ```
 
 对于树莓派部署，推荐使用静态交叉编译：
@@ -58,16 +58,16 @@ scp target/aarch64-unknown-linux-musl/release/epaper_converter pi@<ip>:/usr/loca
 ### 图片转换 (`convert`)
 
 ```bash
-epaper_converter convert input.jpg output.bin -f bin -d floyd
+epaper_converter convert input.jpg output.bin -f bin --halftone atkinson
 ```
 
 **核心参数**：
 
 - `-w, --width` / `-H, --height`：目标分辨率（默认 `800x480`）。
-- `-d, --dither`：量化/抖动模式（默认 `floyd`）。
-  - `fast`：无抖动，速度最快。**适合插画、UI设计稿或纯色块较多的图像**。
-  - `floyd`：误差扩散抖动，画质好。**适合真实照片、人像、风景等色彩层次丰富的图像**。
-  - `auto`：根据图像色彩复杂度智能选择，兼顾性能与画质。
+- `-m, --halftone`：半色调模式（默认 `bayer`）。
+  - `bayer`：规则阈值矩阵抖动，画面更干净、速度更快。**适合大多数墨水屏预览与常规照片**。
+  - `atkinson`：更克制的误差扩散，层次更锐利。**适合细节复杂、局部反差高的图像**。
+  - `auto`：根据图像复杂度在 `bayer` 与 `atkinson` 之间自动选择。
 - `--resize-mode`：缩放策略（`contain`, `cover`, `stretch`，默认 `contain`）。
 - `-f, --format`：输出格式（`bmp`, `bin`, `packed`, `png`, `both`）。
 - `-b, --benchmark`：打印处理耗时。
@@ -76,7 +76,7 @@ epaper_converter convert input.jpg output.bin -f bin -d floyd
 
 - **照片转换**（等比留白 + 自适应抖动）：
   ```bash
-  epaper_converter convert photo.jpg frame.bin -f bin -d auto --resize-mode contain
+  epaper_converter convert photo.jpg frame.bin -f bin --halftone auto --resize-mode contain
   ```
 - **壁纸转换**（中心裁剪铺满）：
   ```bash
@@ -84,7 +84,7 @@ epaper_converter convert input.jpg output.bin -f bin -d floyd
   ```
 - **快速生成预览图**：
   ```bash
-  epaper_converter convert photo.jpg preview.bmp -f bmp -d fast
+  epaper_converter convert photo.jpg preview.bmp -f bmp --halftone bayer
   ```
 
 ### 格式检查 (`check`)
@@ -103,7 +103,7 @@ epaper_converter check preview.bmp --verbose
 
 ### 性能基准测试 (`benchmark`)
 
-评估当前设备上的转换耗时（包括 fast/floyd 模式及反向 RGB 生成）。
+评估当前设备上的转换耗时（包括 `bayer` / `atkinson` 模式及反向 RGB 生成）。
 
 ```bash
 epaper_converter benchmark photo.jpg

@@ -35,7 +35,7 @@ def is_packed_buffer(path: Path) -> bool:
     return path.suffix.lower() == '.packed' and path.exists() and path.stat().st_size == PACKED_SIZE
 
 
-def convert_to_packed(image_path: str, *, dither: str, resize_mode: str, benchmark: bool) -> Path:
+def convert_to_packed(image_path: str, *, halftone: str, resize_mode: str, benchmark: bool) -> Path:
     source = Path(image_path)
     if is_packed_buffer(source):
         print('Input is already a packed display buffer; skipping conversion.')
@@ -51,13 +51,13 @@ def convert_to_packed(image_path: str, *, dither: str, resize_mode: str, benchma
         image_path,
         str(tmp_path),
         '-f', 'packed',
-        '-d', dither,
+        '--halftone', halftone,
         '--resize-mode', resize_mode,
     ]
     if benchmark:
         cmd.append('--benchmark')
 
-    print(f'Converting image with dither={dither}, resize_mode={resize_mode} to packed buffer ...')
+    print(f'Converting image with halftone={halftone}, resize_mode={resize_mode} to packed buffer ...')
     subprocess.run(cmd, check=True)
     return tmp_path
 
@@ -83,7 +83,7 @@ def display_packed_buffer(packed_path: Path, *, clear: bool = False) -> None:
 def display_image(
     image_path: str,
     *,
-    dither: str = 'auto',
+    halftone: str = 'auto',
     resize_mode: str = 'contain',
     benchmark: bool = False,
     clear: bool = False,
@@ -95,7 +95,7 @@ def display_image(
     try:
         packed_path = convert_to_packed(
             image_path,
-            dither=dither,
+            halftone=halftone,
             resize_mode=resize_mode,
             benchmark=benchmark,
         )
@@ -124,9 +124,7 @@ def display_image(
 def main() -> None:
     parser = argparse.ArgumentParser(description='Display an image on the 7.3inch e-Paper E screen')
     parser.add_argument('image', help='Path to the image file or .packed buffer')
-    parser.add_argument('--dither', choices=['fast', 'floyd', 'auto'], default='auto', help='Dither strategy')
-    parser.add_argument('--fast', action='store_true', help='Shortcut for --dither fast')
-    parser.add_argument('--floyd', action='store_true', help='Shortcut for --dither floyd')
+    parser.add_argument('--halftone', choices=['bayer', 'atkinson', 'auto'], default='auto', help='Halftone strategy')
     parser.add_argument('--resize-mode', choices=['stretch', 'contain', 'cover'], default='contain', help='Resize strategy during conversion')
     parser.add_argument('--benchmark', action='store_true', help='Print converter benchmark timing')
     parser.add_argument('--clear', action='store_true', help='Clear panel before display (disabled by default)')
@@ -136,15 +134,9 @@ def main() -> None:
         print(f'File not found: {args.image}', file=sys.stderr)
         sys.exit(1)
 
-    dither = args.dither
-    if args.fast:
-        dither = 'fast'
-    if args.floyd:
-        dither = 'floyd'
-
     display_image(
         args.image,
-        dither=dither,
+        halftone=args.halftone,
         resize_mode=args.resize_mode,
         benchmark=args.benchmark,
         clear=args.clear,

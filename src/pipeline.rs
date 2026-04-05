@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 
-use crate::cli::{DitherMode, ResizeMode};
+use crate::cli::{HalftoneMode, ResizeMode};
 use crate::quantize::PALETTE;
 
 pub(crate) fn resize_with_mode(
@@ -102,7 +102,7 @@ pub(crate) fn prepare_image(
     Ok(resize_with_mode(&oriented, width, height, resize_mode))
 }
 
-pub(crate) fn choose_dither_mode(img: &RgbImage) -> DitherMode {
+pub(crate) fn choose_halftone_mode(img: &RgbImage) -> HalftoneMode {
     let width = img.width() as usize;
     let height = img.height() as usize;
     let total = width * height;
@@ -149,9 +149,9 @@ pub(crate) fn choose_dither_mode(img: &RgbImage) -> DitherMode {
     };
 
     if unique_count > 96 || avg_diff > 48.0 {
-        DitherMode::Floyd
+        HalftoneMode::Atkinson
     } else {
-        DitherMode::Fast
+        HalftoneMode::Bayer
     }
 }
 
