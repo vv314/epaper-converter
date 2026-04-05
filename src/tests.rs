@@ -2,7 +2,7 @@ use crate::cli::{HalftoneMode, ResizeMode};
 use crate::pipeline::{
     check_epaper_format, choose_halftone_mode, indices_to_packed_buffer, resize_with_mode,
 };
-use crate::quantize::{quantize_atkinson, quantize_bayer, PALETTE};
+use crate::quantize::{quantize_atkinson, quantize_bayer, quantize_blue_noise, PALETTE};
 use image::{DynamicImage, ImageBuffer, Rgb};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -51,7 +51,7 @@ fn auto_strategy_prefers_bayer_for_smooth_gradient() {
         let value = (x * 4).min(255) as u8;
         Rgb([value, value, 255])
     });
-    assert_eq!(choose_halftone_mode(&img), HalftoneMode::Bayer);
+    assert_eq!(choose_halftone_mode(&img), HalftoneMode::BlueNoise);
 }
 
 #[test]
@@ -71,6 +71,23 @@ fn bayer_quantizer_preserves_dimensions_and_palette_range() {
 
     assert_eq!(indices.len(), 16 * 16);
     assert!(indices.iter().all(|&idx| idx < PALETTE.len() as u8));
+}
+
+#[test]
+fn blue_noise_quantizer_is_deterministic_and_in_palette() {
+    let img = ImageBuffer::from_fn(16, 16, |x, y| {
+        Rgb([
+            (x * 17) as u8,
+            (y * 17) as u8,
+            ((x * 19 + y * 7) % 256) as u8,
+        ])
+    });
+    let first = quantize_blue_noise(&img, 16, 16);
+    let second = quantize_blue_noise(&img, 16, 16);
+
+    assert_eq!(first, second);
+    assert_eq!(first.len(), 16 * 16);
+    assert!(first.iter().all(|&idx| idx < PALETTE.len() as u8));
 }
 
 #[test]

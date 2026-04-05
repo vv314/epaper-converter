@@ -72,8 +72,9 @@ description: Convert and display images for Waveshare 7.3inch e-Paper E by calli
 - `-H, --height`：目标高度，默认 `480`
 - `-m, --halftone`：半色调算法。
   - `bayer`：规则阈值矩阵抖动，默认方案，干净稳定。
+  - `blue-noise`：蓝噪声阈值纹理，更适合渐变和细腻哑光质感。
   - `atkinson`：更锐利的误差扩散，适合高复杂度图像。
-  - `auto`：（默认选项）根据图像复杂度在 `bayer` 与 `atkinson` 间自动选择。
+  - `auto`：（默认选项）根据图像复杂度在 `bayer`、`blue-noise` 与 `atkinson` 间自动选择。
 - `--resize-mode`：排版策略。`contain`（等比留白）, `cover`（裁剪填满）, `stretch`（无视比例拉伸）
 - `--auto-rotate true|false`：是否按 EXIF 自动旋转
 - `-f, --format`：输出文件格式。可选 `packed`, `bin`, `bmp`, `png`, `both`

@@ -60,7 +60,7 @@ def convert_image(input_path: str, output_path: str, width: int = 800, height: i
         output_path: Path to save converted image
         width: Target width (default 800)
         height: Target height (default 480)
-        halftone: Halftone algorithm (`bayer`, `atkinson`, `auto`)
+        halftone: Halftone algorithm (`bayer`, `blue-noise`, `atkinson`, `auto`)
     """
     ensure_binary()
 
@@ -139,7 +139,7 @@ def main():
         help='Target height (default: 480)'
     )
     parser.add_argument(
-        '--halftone', choices=['bayer', 'atkinson', 'auto'], default='auto',
+        '--halftone', choices=['bayer', 'blue-noise', 'atkinson', 'auto'], default='auto',
         help='Halftone algorithm (default: auto)'
     )
     parser.add_argument(

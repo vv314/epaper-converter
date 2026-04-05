@@ -148,10 +148,12 @@ pub(crate) fn choose_halftone_mode(img: &RgbImage) -> HalftoneMode {
         diff_sum as f64 / diff_samples as f64
     };
 
-    if unique_count > 96 || avg_diff > 48.0 {
+    if unique_count <= 8 && avg_diff < 12.0 {
+        HalftoneMode::Bayer
+    } else if unique_count > 96 || avg_diff > 48.0 {
         HalftoneMode::Atkinson
     } else {
-        HalftoneMode::Bayer
+        HalftoneMode::BlueNoise
     }
 }
 

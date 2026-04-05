@@ -124,7 +124,7 @@ def display_image(
 def main() -> None:
     parser = argparse.ArgumentParser(description='Display an image on the 7.3inch e-Paper E screen')
     parser.add_argument('image', help='Path to the image file or .packed buffer')
-    parser.add_argument('--halftone', choices=['bayer', 'atkinson', 'auto'], default='auto', help='Halftone strategy')
+    parser.add_argument('--halftone', choices=['bayer', 'blue-noise', 'atkinson', 'auto'], default='auto', help='Halftone strategy')
     parser.add_argument('--resize-mode', choices=['stretch', 'contain', 'cover'], default='contain', help='Resize strategy during conversion')
     parser.add_argument('--benchmark', action='store_true', help='Print converter benchmark timing')
     parser.add_argument('--clear', action='store_true', help='Clear panel before display (disabled by default)')

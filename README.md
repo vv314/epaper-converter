@@ -29,7 +29,7 @@
 ## 功能概览
 
 - 使用 `Lanczos3` 进行高质量缩放。
-- 支持三种半色调模式：`bayer`、`atkinson`、`auto`（自适应）。
+- 支持四种半色调模式：`bayer`、`blue-noise`、`atkinson`、`auto`（自适应）。
 - 支持三种缩放策略：`contain`（等比留白）、`cover`（中心裁剪铺满）、`stretch`（强制拉伸）。
 - 默认读取 EXIF 信息校正图像方向。
 - **输入支持**：`JPEG`, `PNG`, `BMP`。
@@ -66,8 +66,9 @@ epaper_converter convert input.jpg output.bin -f bin --halftone atkinson
 - `-w, --width` / `-H, --height`：目标分辨率（默认 `800x480`）。
 - `-m, --halftone`：半色调模式（默认 `bayer`）。
   - `bayer`：规则阈值矩阵抖动，画面更干净、速度更快。**适合大多数墨水屏预览与常规照片**。
+  - `blue-noise`：蓝噪声阈值纹理，颗粒更细腻、规律感更弱。**适合渐变和大面积平滑过渡**。
   - `atkinson`：更克制的误差扩散，层次更锐利。**适合细节复杂、局部反差高的图像**。
-  - `auto`：根据图像复杂度在 `bayer` 与 `atkinson` 之间自动选择。
+  - `auto`：根据图像复杂度在 `bayer`、`blue-noise` 与 `atkinson` 之间自动选择。
 - `--resize-mode`：缩放策略（`contain`, `cover`, `stretch`，默认 `contain`）。
 - `-f, --format`：输出格式（`bmp`, `bin`, `packed`, `png`, `both`）。
 - `-b, --benchmark`：打印处理耗时。

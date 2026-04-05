@@ -8,7 +8,7 @@ use crate::pipeline::{
     check_epaper_format, choose_halftone_mode, indices_to_rgb_image, prepare_image,
     resize_with_mode, save_bin_buffer, save_packed_buffer,
 };
-use crate::quantize::{quantize_atkinson, quantize_bayer};
+use crate::quantize::{quantize_atkinson, quantize_bayer, quantize_blue_noise};
 
 #[derive(Parser)]
 #[command(name = "epaper-converter")]
@@ -79,9 +79,11 @@ pub enum HalftoneMode {
     /// Bayer ordered dithering - cleaner and more stable on e-paper panels
     #[default]
     Bayer,
+    /// Blue noise dithering - finer and less structured texture on gradients
+    BlueNoise,
     /// Atkinson dithering - sharper diffusion with less gray haze than Floyd
     Atkinson,
-    /// Choose Bayer or Atkinson automatically based on image complexity
+    /// Choose Bayer, blue noise, or Atkinson automatically based on image complexity
     Auto,
 }
 
@@ -115,6 +117,7 @@ enum OutputFormat {
 fn halftone_mode_label(mode: HalftoneMode) -> &'static str {
     match mode {
         HalftoneMode::Bayer => "Bayer ordered dithering",
+        HalftoneMode::BlueNoise => "Blue noise dithering",
         HalftoneMode::Atkinson => "Atkinson dithering",
         HalftoneMode::Auto => "auto",
     }
@@ -163,6 +166,7 @@ pub fn run() -> Result<()> {
 
             let indices = match resolved_halftone {
                 HalftoneMode::Bayer => quantize_bayer(&rgb_img, width, height),
+                HalftoneMode::BlueNoise => quantize_blue_noise(&rgb_img, width, height),
                 HalftoneMode::Atkinson => quantize_atkinson(&rgb_img, width, height),
                 HalftoneMode::Auto => unreachable!(),
             };
@@ -258,6 +262,10 @@ pub fn run() -> Result<()> {
             let bayer_time = start.elapsed();
 
             let start = Instant::now();
+            black_box(quantize_blue_noise(&rgb_img, width, height));
+            let blue_noise_time = start.elapsed();
+
+            let start = Instant::now();
             black_box(quantize_atkinson(&rgb_img, width, height));
             let atkinson_time = start.elapsed();
 
@@ -271,6 +279,10 @@ pub fn run() -> Result<()> {
                 bayer_time.as_secs_f64() * 1000.0
             );
             println!(
+                "Blue noise:    {:>8.2}ms",
+                blue_noise_time.as_secs_f64() * 1000.0
+            );
+            println!(
                 "Atkinson mode:{:>8.2}ms",
                 atkinson_time.as_secs_f64() * 1000.0
             );
@@ -281,6 +293,10 @@ pub fn run() -> Result<()> {
             println!(
                 "Total Bayer:  {:>8.2}ms",
                 (bayer_time + convert_time).as_secs_f64() * 1000.0
+            );
+            println!(
+                "Total Blue:   {:>8.2}ms",
+                (blue_noise_time + convert_time).as_secs_f64() * 1000.0
             );
             println!(
                 "Total Atkinson:{:>8.2}ms",
