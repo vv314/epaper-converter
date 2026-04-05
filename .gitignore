@@ -1,3 +1,4 @@
 /target
 rustup
 .DS_Store
+/output
