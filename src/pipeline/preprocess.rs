@@ -105,7 +105,10 @@ pub(crate) fn prepare_image(
 }
 
 pub(crate) fn apply_gamma_to_rgb_image(img: &mut RgbImage, gamma: f32) -> Result<()> {
-    anyhow::ensure!(gamma.is_finite() && gamma > 0.0, "Gamma must be a finite value greater than 0");
+    anyhow::ensure!(
+        gamma.is_finite() && gamma > 0.0,
+        "Gamma must be a finite value greater than 0"
+    );
 
     if (gamma - 1.0).abs() < f32::EPSILON {
         return Ok(());

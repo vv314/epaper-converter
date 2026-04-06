@@ -67,8 +67,9 @@ fn plan_transition_penalty(plan: &YliluomaMixPlan) -> f32 {
         let prev = plan.colors[idx - 1];
         let next = plan.colors[idx];
         if prev != next {
-            penalty += ciede2000_distance_sq(palette_lab[prev as usize], palette_lab[next as usize])
-                .sqrt();
+            penalty +=
+                ciede2000_distance_sq(palette_lab[prev as usize], palette_lab[next as usize])
+                    .sqrt();
         }
     }
 
@@ -78,9 +79,18 @@ fn plan_transition_penalty(plan: &YliluomaMixPlan) -> f32 {
 fn top_palette_candidates(target_lab: [f32; 3], limit: usize) -> Vec<u8> {
     let palette_lab = palette_lab();
     let mut ranked = (0..PALETTE.len())
-        .map(|idx| (idx as u8, ciede2000_distance_sq(target_lab, palette_lab[idx])))
+        .map(|idx| {
+            (
+                idx as u8,
+                ciede2000_distance_sq(target_lab, palette_lab[idx]),
+            )
+        })
         .collect::<Vec<_>>();
-    ranked.sort_by(|lhs, rhs| lhs.1.partial_cmp(&rhs.1).unwrap_or(std::cmp::Ordering::Equal));
+    ranked.sort_by(|lhs, rhs| {
+        lhs.1
+            .partial_cmp(&rhs.1)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     ranked.into_iter().take(limit).map(|(idx, _)| idx).collect()
 }
 
@@ -125,7 +135,8 @@ fn evaluate_mix(target_lab: [f32; 3], counts: &[(u8, usize)]) -> (f32, YliluomaM
         mixed_linear[0] += palette_linear[color as usize][0] * weight;
         mixed_linear[1] += palette_linear[color as usize][1] * weight;
         mixed_linear[2] += palette_linear[color as usize][2] * weight;
-        component_penalty += ciede2000_distance_sq(target_lab, palette_lab[color as usize]) * weight;
+        component_penalty +=
+            ciede2000_distance_sq(target_lab, palette_lab[color as usize]) * weight;
         let luma = palette_luma()[color as usize];
         min_luma = min_luma.min(luma);
         max_luma = max_luma.max(luma);
@@ -146,7 +157,11 @@ fn evaluate_mix(target_lab: [f32; 3], counts: &[(u8, usize)]) -> (f32, YliluomaM
     let mixed_lab = linear_array_to_lab(mixed_linear);
     let mixed_chroma = (mixed_lab[1] * mixed_lab[1] + mixed_lab[2] * mixed_lab[2]).sqrt();
     let plan = build_plan_from_counts(counts);
-    let luma_span = if active_colors > 1 { max_luma - min_luma } else { 0.0 };
+    let luma_span = if active_colors > 1 {
+        max_luma - min_luma
+    } else {
+        0.0
+    };
     let nearest_present = counts
         .iter()
         .any(|(color, count)| *count > 0 && *color == nearest_palette_idx);

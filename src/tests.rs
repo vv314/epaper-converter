@@ -152,8 +152,14 @@ fn palette_histograms_distinguish_exact_and_nearest_projection() {
     assert_eq!(invalid, 2);
 
     assert_eq!(nearest_counts.iter().sum::<u64>(), 4);
-    assert!(nearest_counts[4] >= 2, "expected blue-ish pixels to project to blue");
-    assert!(nearest_counts[1] >= 1, "expected near-white pixels to project to white");
+    assert!(
+        nearest_counts[4] >= 2,
+        "expected blue-ish pixels to project to blue"
+    );
+    assert!(
+        nearest_counts[1] >= 1,
+        "expected near-white pixels to project to white"
+    );
 }
 
 #[test]

@@ -192,9 +192,8 @@ pub(super) fn ciede2000_distance_sq(lhs: [f32; 3], rhs: [f32; 3]) -> f32 {
         delta
     };
 
-    let delta_big_h_prime = 2.0
-        * (c1_prime * c2_prime).sqrt()
-        * (0.5 * delta_h_prime).to_radians().sin();
+    let delta_big_h_prime =
+        2.0 * (c1_prime * c2_prime).sqrt() * (0.5 * delta_h_prime).to_radians().sin();
 
     let avg_l_prime = 0.5 * (l1 + l2);
     let avg_c_prime = 0.5 * (c1_prime + c2_prime);
@@ -211,8 +210,7 @@ pub(super) fn ciede2000_distance_sq(lhs: [f32; 3], rhs: [f32; 3]) -> f32 {
         0.5 * (h1_prime + h2_prime)
     };
 
-    let t = 1.0
-        - 0.17 * (avg_h_prime - 30.0).to_radians().cos()
+    let t = 1.0 - 0.17 * (avg_h_prime - 30.0).to_radians().cos()
         + 0.24 * (2.0 * avg_h_prime).to_radians().cos()
         + 0.32 * (3.0 * avg_h_prime + 6.0).to_radians().cos()
         - 0.20 * (4.0 * avg_h_prime - 63.0).to_radians().cos();
@@ -220,9 +218,8 @@ pub(super) fn ciede2000_distance_sq(lhs: [f32; 3], rhs: [f32; 3]) -> f32 {
     let delta_theta = 30.0 * (-(((avg_h_prime - 275.0) / 25.0).powi(2))).exp();
     let avg_c_prime7 = avg_c_prime.powi(7);
     let r_c = 2.0 * (avg_c_prime7 / (avg_c_prime7 + 6_103_515_625.0)).sqrt();
-    let s_l = 1.0
-        + (0.015 * (avg_l_prime - 50.0).powi(2))
-            / (20.0 + (avg_l_prime - 50.0).powi(2)).sqrt();
+    let s_l =
+        1.0 + (0.015 * (avg_l_prime - 50.0).powi(2)) / (20.0 + (avg_l_prime - 50.0).powi(2)).sqrt();
     let s_c = 1.0 + 0.045 * avg_c_prime;
     let s_h = 1.0 + 0.015 * avg_c_prime * t;
     let r_t = -r_c * (2.0 * delta_theta).to_radians().sin();

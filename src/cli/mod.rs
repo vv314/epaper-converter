@@ -4,8 +4,8 @@ mod commands;
 use anyhow::Result;
 use clap::Parser;
 
-pub use args::{HalftoneMode, ResizeMode};
 use args::{Cli, Commands};
+pub use args::{HalftoneMode, ResizeMode};
 
 pub fn run() -> Result<()> {
     let cli = Cli::parse();
