@@ -15,7 +15,6 @@ const LUT_SIZE: usize = 1 << (LUT_BITS * 3);
 const LUT_MASK_USIZE: usize = (1 << LUT_BITS) - 1;
 
 static COLOR_LUT: OnceLock<Box<[u8]>> = OnceLock::new();
-static PALETTE_LAB: OnceLock<Box<[[f32; 3]]>> = OnceLock::new();
 static PALETTE_LINEAR: OnceLock<Box<[[f32; 3]]>> = OnceLock::new();
 static PALETTE_LUMA: OnceLock<Box<[f32]>> = OnceLock::new();
 
@@ -107,34 +106,12 @@ fn srgb_to_linear(channel: u8) -> f32 {
 }
 
 #[inline(always)]
-fn linear_to_srgb(value: f32) -> u8 {
-    let value = value.clamp(0.0, 1.0);
-    let srgb = if value <= 0.0031308 {
-        value * 12.92
-    } else {
-        1.055 * value.powf(1.0 / 2.4) - 0.055
-    };
-    (srgb * 255.0).round().clamp(0.0, 255.0) as u8
-}
-
-#[inline(always)]
 fn rgb_to_linear_array(color: [u8; 3]) -> [f32; 3] {
     [
         srgb_to_linear(color[0]),
         srgb_to_linear(color[1]),
         srgb_to_linear(color[2]),
     ]
-}
-
-#[inline(always)]
-pub(super) fn linear_array_to_lab(linear: [f32; 3]) -> [f32; 3] {
-    let srgb = [
-        linear_to_srgb(linear[0]),
-        linear_to_srgb(linear[1]),
-        linear_to_srgb(linear[2]),
-    ];
-    let lab = Lab::from_rgb(&srgb);
-    [lab.l, lab.a, lab.b]
 }
 
 #[inline(always)]
@@ -229,17 +206,6 @@ pub(super) fn ciede2000_distance_sq(lhs: [f32; 3], rhs: [f32; 3]) -> f32 {
     let term_h = delta_big_h_prime / s_h;
 
     term_l * term_l + term_c * term_c + term_h * term_h + r_t * term_c * term_h
-}
-
-#[inline(always)]
-pub(super) fn palette_lab() -> &'static [[f32; 3]] {
-    PALETTE_LAB.get_or_init(|| {
-        PALETTE
-            .iter()
-            .map(|&color| lab_components_from_rgb(color))
-            .collect::<Vec<_>>()
-            .into_boxed_slice()
-    })
 }
 
 #[inline(always)]

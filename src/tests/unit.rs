@@ -110,7 +110,6 @@ fn atkinson_quantizer_preserves_dimensions_and_palette_range() {
 }
 
 #[test]
-#[ignore = "Yliluoma is too slow for the default unit-test loop"]
 fn yliluoma_quantizer_is_deterministic_and_in_palette() {
     let img = ImageBuffer::from_fn(16, 16, |x, y| {
         Rgb([
