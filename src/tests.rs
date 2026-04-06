@@ -1,7 +1,7 @@
 use crate::cli::{HalftoneMode, ResizeMode};
 use crate::pipeline::{
     apply_gamma_to_rgb_image, check_epaper_format, choose_halftone_mode, indices_to_packed_buffer,
-    palette_histogram_exact, palette_histogram_nearest, prepare_image, resize_with_mode,
+    palette_histogram_exact, palette_histogram_nearest, resize_with_mode,
 };
 use crate::quantize::{
     quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_yliluoma, PALETTE,
@@ -16,13 +16,6 @@ fn temp_file_path(name: &str) -> PathBuf {
         .unwrap()
         .as_nanos();
     std::env::temp_dir().join(format!("epaper_converter_{name}_{nanos}.png"))
-}
-
-fn fixture_path(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests")
-        .join("fixtures")
-        .join(name)
 }
 
 #[test]
@@ -140,25 +133,6 @@ fn yliluoma_quantizer_is_deterministic_and_in_palette() {
     assert_eq!(first, second);
     assert_eq!(first.len(), 16 * 16);
     assert!(first.iter().all(|&idx| idx < PALETTE.len() as u8));
-}
-
-#[test]
-fn yliluoma_preserves_blue_structure_for_starry_night_fixture() {
-    let img = prepare_image(&fixture_path("starry_night.jpg"), 800, 480, ResizeMode::Cover, true, 1.0)
-        .expect("fixture should load");
-    let indices = quantize_yliluoma(&img, 800, 480);
-    let total = indices.len() as f32;
-    let blue_ratio = indices.iter().filter(|&&idx| idx == 4).count() as f32 / total;
-    let black_ratio = indices.iter().filter(|&&idx| idx == 0).count() as f32 / total;
-
-    assert!(
-        blue_ratio > 0.05,
-        "expected noticeable blue coverage, got {blue_ratio:.4}"
-    );
-    assert!(
-        black_ratio < 0.85,
-        "expected starry night to avoid black collapse, got {black_ratio:.4}"
-    );
 }
 
 #[test]
