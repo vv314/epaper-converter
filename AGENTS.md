@@ -11,14 +11,14 @@
 - 开发测试场景下，测试图片统一从 `tests/fixtures/` 读取。
 - 生成结果统一输出到项目根目录下的 `output/` 目录。
 - 缩放/裁剪模式固定使用 `cover`。
-- 输出格式固定为 `bmp`。
-- 文件命名格式固定为 `{原名}.cover.{算法}.bmp`。
+- 为了能让 LLM 读取图片内容，输出格式固定为 `png`。
+- 文件命名格式固定为 `{原名}.cover.{算法}.png`。
 
 ### 命名示例
 
-- `gradient.cover.fast.bmp`
-- `gradient.cover.floyd.bmp`
-- `gradient.cover.auto.bmp`
+- `gradient.cover.fast.png`
+- `gradient.cover.floyd.png`
+- `gradient.cover.auto.png`
 
 ### 产物管理
 
@@ -33,16 +33,16 @@
 
 - 当发生算法改动时，需将测试图片继续输出到项目根目录下的 `output/` 目录，便于与历史结果做并排比较。
 - 缩放/裁剪模式仍固定使用 `cover`。
-- 输出格式仍固定为 `bmp`。
-- 此场景下文件命名格式调整为 `{原名}.cover.{算法}_{算法迭代标识}.bmp`。
+- 使用 `cargo run` 运行，输出格式固定为 `png`。
+- 此场景下文件命名格式调整为 `{原名}.cover.{算法}_{算法迭代标识}.png`。
 - `算法迭代标识` 可以使用版本号，如 `v1`、`v2`；也可以使用语义化标识，如 `rgb`、`lab`。
 
 ### 命名示例
 
-- `gradient.cover.fast_v1.bmp`
-- `gradient.cover.floyd_v2.bmp`
-- `gradient.cover.auto_rgb.bmp`
-- `gradient.cover.auto_lab.bmp`
+- `gradient.cover.fast_v1.png`
+- `gradient.cover.floyd_v2.png`
+- `gradient.cover.auto_rgb.png`
+- `gradient.cover.auto_lab.png`
 
 ### 算法迭代标识规范
 
@@ -54,6 +54,8 @@
 ### 验证流程
 
 - 当修改算法、量化、抖动、颜色映射或缩放策略时，需使用 `tests/fixtures/` 中的样例图重新生成 `output/` 对比产物。
-- 默认生成规则保持为 `cover + bmp`，便于不同迭代结果做横向比较。
+- 默认生成规则保持为 `cover + png`，便于不同迭代结果做横向比较。
+- 除肉眼比对外，需优先使用 `cargo run -- palette-report <原图> <生成图> --resize-mode cover` 做调色板占比分析；该命令会先将原图按同样的预处理流程投影到 6 色调色板，再与生成图的实际调色板占比逐色对比。
+- 调色板占比分析重点关注 `Total abs delta` 与 `Max color delta`：两者越小，说明生成图在颜色占比上越接近原图投影；若单色偏差异常放大，通常意味着该色被过度压缩或过度扩张。
 - 若涉及算法逻辑改动，提交前至少运行一次 `cargo test`。
 - 需要人工确认时，优先对比同一原图在不同算法或不同迭代标识下的输出结果。

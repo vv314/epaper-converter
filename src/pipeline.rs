@@ -6,7 +6,7 @@ use std::io::BufReader;
 use std::path::Path;
 
 use crate::cli::{HalftoneMode, ResizeMode};
-use crate::quantize::PALETTE;
+use crate::quantize::{exact_palette_index, nearest_palette_index, PALETTE};
 
 pub(crate) fn resize_with_mode(
     img: &DynamicImage,
@@ -153,7 +153,7 @@ pub(crate) fn choose_halftone_mode(img: &RgbImage) -> HalftoneMode {
     } else if unique_count > 96 || avg_diff > 48.0 {
         HalftoneMode::Atkinson
     } else {
-        HalftoneMode::BlueNoise
+        HalftoneMode::Yliluoma
     }
 }
 
@@ -168,6 +168,31 @@ pub(crate) fn indices_to_rgb_image(indices: &[u8], width: u32, height: u32) -> R
     }
 
     rgb_img
+}
+
+pub(crate) fn palette_histogram_nearest(img: &RgbImage) -> [u64; 6] {
+    let mut counts = [0u64; 6];
+
+    for pixel in img.pixels() {
+        let idx = nearest_palette_index(pixel.0) as usize;
+        counts[idx] += 1;
+    }
+
+    counts
+}
+
+pub(crate) fn palette_histogram_exact(img: &RgbImage) -> ([u64; 6], u64) {
+    let mut counts = [0u64; 6];
+    let mut invalid = 0u64;
+
+    for pixel in img.pixels() {
+        match exact_palette_index(pixel.0) {
+            Some(idx) => counts[idx as usize] += 1,
+            None => invalid += 1,
+        }
+    }
+
+    (counts, invalid)
 }
 
 pub(crate) fn save_bin_buffer(indices: &[u8], path: &Path) -> Result<()> {

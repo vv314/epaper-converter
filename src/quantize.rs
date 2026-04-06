@@ -1,4 +1,6 @@
 use image::RgbImage;
+use lab::Lab;
+use std::collections::HashMap;
 use std::sync::OnceLock;
 
 pub(crate) const PALETTE: [[u8; 3]; 6] = [
@@ -16,6 +18,9 @@ const LUT_MASK_USIZE: usize = (1 << LUT_BITS) - 1;
 
 static COLOR_LUT: OnceLock<Box<[u8]>> = OnceLock::new();
 static BLUE_NOISE_BIAS_MASK: OnceLock<Box<[i16]>> = OnceLock::new();
+static PALETTE_LAB: OnceLock<Box<[[f32; 3]]>> = OnceLock::new();
+static PALETTE_LINEAR: OnceLock<Box<[[f32; 3]]>> = OnceLock::new();
+static PALETTE_LUMA: OnceLock<Box<[f32]>> = OnceLock::new();
 
 const BAYER_8X8: [[u8; 8]; 8] = [
     [0, 48, 12, 60, 3, 51, 15, 63],
@@ -33,6 +38,28 @@ const BLUE_NOISE_SIZE: usize = 32;
 const BLUE_NOISE_PIXELS: usize = BLUE_NOISE_SIZE * BLUE_NOISE_SIZE;
 const BLUE_NOISE_CANDIDATES: usize = 8;
 const BLUE_NOISE_STRENGTH: i32 = 44;
+const YLILUOMA_MIX_LEVELS: usize = 64;
+const YLILUOMA_CACHE_BITS: u8 = 6;
+const YLILUOMA_NEAREST_CANDIDATES: usize = 5;
+const YLILUOMA_COMPONENT_PENALTY_WEIGHT: f32 = 0.18;
+const YLILUOMA_COMPLEXITY_PENALTY_WEIGHT: f32 = 0.22;
+const YLILUOMA_CHROMA_MATCH_WEIGHT: f32 = 0.24;
+const YLILUOMA_COMPONENT_CHROMA_DEFICIT_WEIGHT: f32 = 0.18;
+const YLILUOMA_COMPONENT_HUE_WEIGHT: f32 = 0.24;
+const YLILUOMA_PLAN_TRANSITION_WEIGHT: f32 = 0.16;
+const YLILUOMA_LUMA_SPAN_PENALTY_WEIGHT: f32 = 0.22;
+const YLILUOMA_NEAREST_PRESENCE_WEIGHT: f32 = 0.30;
+
+#[derive(Clone, Copy)]
+struct YliluomaMixPlan {
+    colors: [u8; 64], // Stores the sequence of colors for each threshold level (0-63)
+}
+
+impl Default for YliluomaMixPlan {
+    fn default() -> Self {
+        Self { colors: [0; 64] }
+    }
+}
 
 #[inline(always)]
 fn weighted_distance(r: u8, g: u8, b: u8, color: [u8; 3]) -> u32 {
@@ -88,6 +115,386 @@ fn nearest_color(r: u8, g: u8, b: u8) -> u8 {
     let g6 = g >> 2;
     let b6 = b >> 2;
     nearest_color_6bit(r6, g6, b6)
+}
+
+pub(crate) fn nearest_palette_index(color: [u8; 3]) -> u8 {
+    nearest_color(color[0], color[1], color[2])
+}
+
+pub(crate) fn exact_palette_index(color: [u8; 3]) -> Option<u8> {
+    PALETTE
+        .iter()
+        .position(|&palette_color| palette_color == color)
+        .map(|idx| idx as u8)
+}
+
+#[inline(always)]
+fn lab_components_from_rgb(color: [u8; 3]) -> [f32; 3] {
+    // Apply gamma decoding and Lab conversion to ensure correct distances and blending
+    let lab = Lab::from_rgb(&color);
+    [lab.l, lab.a, lab.b]
+}
+
+#[inline(always)]
+fn srgb_to_linear(channel: u8) -> f32 {
+    let value = channel as f32 / 255.0;
+    if value <= 0.04045 {
+        value / 12.92
+    } else {
+        ((value + 0.055) / 1.055).powf(2.4)
+    }
+}
+
+#[inline(always)]
+fn linear_to_srgb(value: f32) -> u8 {
+    let value = value.clamp(0.0, 1.0);
+    let srgb = if value <= 0.0031308 {
+        value * 12.92
+    } else {
+        1.055 * value.powf(1.0 / 2.4) - 0.055
+    };
+    (srgb * 255.0).round().clamp(0.0, 255.0) as u8
+}
+
+#[inline(always)]
+fn rgb_to_linear_array(color: [u8; 3]) -> [f32; 3] {
+    [
+        srgb_to_linear(color[0]),
+        srgb_to_linear(color[1]),
+        srgb_to_linear(color[2]),
+    ]
+}
+
+#[inline(always)]
+fn linear_array_to_lab(linear: [f32; 3]) -> [f32; 3] {
+    let srgb = [
+        linear_to_srgb(linear[0]),
+        linear_to_srgb(linear[1]),
+        linear_to_srgb(linear[2]),
+    ];
+    let lab = Lab::from_rgb(&srgb);
+    [lab.l, lab.a, lab.b]
+}
+
+#[inline(always)]
+fn linear_luma(linear: [f32; 3]) -> f32 {
+    linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722
+}
+
+#[inline(always)]
+fn ciede2000_distance_sq(lhs: [f32; 3], rhs: [f32; 3]) -> f32 {
+    let (l1, a1, b1) = (lhs[0], lhs[1], lhs[2]);
+    let (l2, a2, b2) = (rhs[0], rhs[1], rhs[2]);
+
+    let c1 = (a1 * a1 + b1 * b1).sqrt();
+    let c2 = (a2 * a2 + b2 * b2).sqrt();
+    let avg_c = 0.5 * (c1 + c2);
+    let avg_c7 = avg_c.powi(7);
+    let g = 0.5 * (1.0 - (avg_c7 / (avg_c7 + 6_103_515_625.0)).sqrt());
+
+    let a1_prime = (1.0 + g) * a1;
+    let a2_prime = (1.0 + g) * a2;
+    let c1_prime = (a1_prime * a1_prime + b1 * b1).sqrt();
+    let c2_prime = (a2_prime * a2_prime + b2 * b2).sqrt();
+
+    fn hue_angle_degrees(b: f32, a: f32) -> f32 {
+        let mut angle = b.atan2(a).to_degrees();
+        if angle < 0.0 {
+            angle += 360.0;
+        }
+        angle
+    }
+
+    let h1_prime = if c1_prime < 1e-9 {
+        0.0
+    } else {
+        hue_angle_degrees(b1, a1_prime)
+    };
+    let h2_prime = if c2_prime < 1e-9 {
+        0.0
+    } else {
+        hue_angle_degrees(b2, a2_prime)
+    };
+
+    let delta_l_prime = l2 - l1;
+    let delta_c_prime = c2_prime - c1_prime;
+
+    let delta_h_prime = if c1_prime < 1e-9 || c2_prime < 1e-9 {
+        0.0
+    } else {
+        let mut delta = h2_prime - h1_prime;
+        if delta > 180.0 {
+            delta -= 360.0;
+        } else if delta < -180.0 {
+            delta += 360.0;
+        }
+        delta
+    };
+
+    let delta_big_h_prime = 2.0
+        * (c1_prime * c2_prime).sqrt()
+        * (0.5 * delta_h_prime).to_radians().sin();
+
+    let avg_l_prime = 0.5 * (l1 + l2);
+    let avg_c_prime = 0.5 * (c1_prime + c2_prime);
+
+    let avg_h_prime = if c1_prime < 1e-9 || c2_prime < 1e-9 {
+        h1_prime + h2_prime
+    } else if (h1_prime - h2_prime).abs() > 180.0 {
+        if h1_prime + h2_prime < 360.0 {
+            0.5 * (h1_prime + h2_prime + 360.0)
+        } else {
+            0.5 * (h1_prime + h2_prime - 360.0)
+        }
+    } else {
+        0.5 * (h1_prime + h2_prime)
+    };
+
+    let t = 1.0
+        - 0.17 * (avg_h_prime - 30.0).to_radians().cos()
+        + 0.24 * (2.0 * avg_h_prime).to_radians().cos()
+        + 0.32 * (3.0 * avg_h_prime + 6.0).to_radians().cos()
+        - 0.20 * (4.0 * avg_h_prime - 63.0).to_radians().cos();
+
+    let delta_theta = 30.0 * (-(((avg_h_prime - 275.0) / 25.0).powi(2))).exp();
+    let avg_c_prime7 = avg_c_prime.powi(7);
+    let r_c = 2.0 * (avg_c_prime7 / (avg_c_prime7 + 6_103_515_625.0)).sqrt();
+    let s_l = 1.0 + (0.015 * (avg_l_prime - 50.0).powi(2)) / (20.0 + (avg_l_prime - 50.0).powi(2)).sqrt();
+    let s_c = 1.0 + 0.045 * avg_c_prime;
+    let s_h = 1.0 + 0.015 * avg_c_prime * t;
+    let r_t = -r_c * (2.0 * delta_theta).to_radians().sin();
+
+    let term_l = delta_l_prime / s_l;
+    let term_c = delta_c_prime / s_c;
+    let term_h = delta_big_h_prime / s_h;
+
+    term_l * term_l + term_c * term_c + term_h * term_h + r_t * term_c * term_h
+}
+
+#[inline(always)]
+fn palette_lab() -> &'static [[f32; 3]] {
+    PALETTE_LAB.get_or_init(|| {
+        PALETTE
+            .iter()
+            .map(|&color| lab_components_from_rgb(color))
+            .collect::<Vec<_>>()
+            .into_boxed_slice()
+    })
+}
+
+#[inline(always)]
+fn palette_linear() -> &'static [[f32; 3]] {
+    PALETTE_LINEAR.get_or_init(|| {
+        PALETTE
+            .iter()
+            .map(|&color| rgb_to_linear_array(color))
+            .collect::<Vec<_>>()
+            .into_boxed_slice()
+    })
+}
+
+#[inline(always)]
+fn palette_luma() -> &'static [f32] {
+    PALETTE_LUMA.get_or_init(|| {
+        palette_linear()
+            .iter()
+            .map(|&color| linear_luma(color))
+            .collect::<Vec<_>>()
+            .into_boxed_slice()
+    })
+}
+
+#[inline(always)]
+fn yliluoma_cache_key(r: u8, g: u8, b: u8) -> u32 {
+    let shift = 8 - YLILUOMA_CACHE_BITS;
+    (((r >> shift) as u32) << (YLILUOMA_CACHE_BITS as u32 * 2))
+        | (((g >> shift) as u32) << YLILUOMA_CACHE_BITS as u32)
+        | (b >> shift) as u32
+}
+
+fn build_plan_from_counts(counts: &[(u8, usize)]) -> YliluomaMixPlan {
+    let palette_luma = palette_luma();
+    let mut sorted = counts.to_vec();
+    sorted.sort_by(|(lhs, _), (rhs, _)| {
+        palette_luma[*lhs as usize]
+            .partial_cmp(&palette_luma[*rhs as usize])
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let mut colors = [0u8; YLILUOMA_MIX_LEVELS];
+    let mut offset = 0usize;
+    for &(color, count) in &sorted {
+        for slot in colors.iter_mut().skip(offset).take(count) {
+            *slot = color;
+        }
+        offset += count;
+    }
+
+    YliluomaMixPlan { colors }
+}
+
+fn plan_transition_penalty(plan: &YliluomaMixPlan) -> f32 {
+    let palette_lab = palette_lab();
+    let mut penalty = 0.0f32;
+
+    for idx in 1..YLILUOMA_MIX_LEVELS {
+        let prev = plan.colors[idx - 1];
+        let next = plan.colors[idx];
+        if prev != next {
+            penalty += ciede2000_distance_sq(palette_lab[prev as usize], palette_lab[next as usize]).sqrt();
+        }
+    }
+
+    penalty
+}
+
+fn top_palette_candidates(target_lab: [f32; 3], limit: usize) -> Vec<u8> {
+    let palette_lab = palette_lab();
+    let mut ranked = (0..PALETTE.len())
+        .map(|idx| (idx as u8, ciede2000_distance_sq(target_lab, palette_lab[idx])))
+        .collect::<Vec<_>>();
+    ranked.sort_by(|lhs, rhs| lhs.1.partial_cmp(&rhs.1).unwrap_or(std::cmp::Ordering::Equal));
+    ranked.into_iter().take(limit).map(|(idx, _)| idx).collect()
+}
+
+fn evaluate_mix(target_lab: [f32; 3], counts: &[(u8, usize)]) -> (f32, YliluomaMixPlan) {
+    let palette_linear = palette_linear();
+    let palette_lab = palette_lab();
+    let mut mixed_linear = [0.0f32; 3];
+    let mut component_penalty = 0.0f32;
+    let mut component_chroma_deficit = 0.0f32;
+    let mut component_hue_penalty = 0.0f32;
+    let mut min_luma = f32::INFINITY;
+    let mut max_luma = f32::NEG_INFINITY;
+    let mut active_colors = 0usize;
+    let target_chroma = (target_lab[1] * target_lab[1] + target_lab[2] * target_lab[2]).sqrt();
+    let lightness = (target_lab[0] / 100.0).clamp(0.0, 1.0);
+    let dark_factor = ((45.0 - target_lab[0]) / 45.0).clamp(0.0, 1.0);
+    let bright_factor = ((target_lab[0] - 35.0) / 50.0).clamp(0.0, 1.0);
+    let vivid_factor = (target_chroma / 45.0).clamp(0.0, 1.0);
+    let chroma_weight = 0.5 + 1.5 * vivid_factor;
+    let (target_hue_a, target_hue_b) = if target_chroma > 1e-3 {
+        (target_lab[1] / target_chroma, target_lab[2] / target_chroma)
+    } else {
+        (0.0, 0.0)
+    };
+    let mut nearest_palette_idx = 0u8;
+    let mut nearest_palette_score = f32::INFINITY;
+
+    for (idx, candidate_lab) in palette_lab.iter().enumerate() {
+        let score = ciede2000_distance_sq(target_lab, *candidate_lab);
+        if score < nearest_palette_score {
+            nearest_palette_score = score;
+            nearest_palette_idx = idx as u8;
+        }
+    }
+
+    for &(color, count) in counts {
+        if count == 0 {
+            continue;
+        }
+        active_colors += 1;
+        let weight = count as f32 / YLILUOMA_MIX_LEVELS as f32;
+        mixed_linear[0] += palette_linear[color as usize][0] * weight;
+        mixed_linear[1] += palette_linear[color as usize][1] * weight;
+        mixed_linear[2] += palette_linear[color as usize][2] * weight;
+        component_penalty += ciede2000_distance_sq(target_lab, palette_lab[color as usize]) * weight;
+        let luma = palette_luma()[color as usize];
+        min_luma = min_luma.min(luma);
+        max_luma = max_luma.max(luma);
+
+        let component_chroma = (palette_lab[color as usize][1] * palette_lab[color as usize][1]
+            + palette_lab[color as usize][2] * palette_lab[color as usize][2])
+            .sqrt();
+        component_chroma_deficit += (target_chroma - component_chroma).max(0.0) * weight;
+
+        if target_chroma > 1e-3 && component_chroma > 1e-3 {
+            let hue_cosine = ((palette_lab[color as usize][1] / component_chroma) * target_hue_a
+                + (palette_lab[color as usize][2] / component_chroma) * target_hue_b)
+                .clamp(-1.0, 1.0);
+            component_hue_penalty += (1.0 - hue_cosine) * target_chroma * weight;
+        }
+    }
+
+    let mixed_lab = linear_array_to_lab(mixed_linear);
+    let mixed_chroma = (mixed_lab[1] * mixed_lab[1] + mixed_lab[2] * mixed_lab[2]).sqrt();
+    let plan = build_plan_from_counts(counts);
+    let luma_span = if active_colors > 1 { max_luma - min_luma } else { 0.0 };
+    let nearest_present = counts
+        .iter()
+        .any(|(color, count)| *count > 0 && *color == nearest_palette_idx);
+    let score = ciede2000_distance_sq(target_lab, mixed_lab)
+        + (target_chroma - mixed_chroma).abs() * YLILUOMA_CHROMA_MATCH_WEIGHT * chroma_weight
+        + component_penalty * YLILUOMA_COMPONENT_PENALTY_WEIGHT
+        + component_chroma_deficit * YLILUOMA_COMPONENT_CHROMA_DEFICIT_WEIGHT * chroma_weight
+        + component_hue_penalty * YLILUOMA_COMPONENT_HUE_WEIGHT * chroma_weight
+        + luma_span
+            * (active_colors.saturating_sub(1) as f32)
+            * YLILUOMA_LUMA_SPAN_PENALTY_WEIGHT
+            * bright_factor
+            * (0.4 + 0.6 * vivid_factor)
+        + (active_colors.saturating_sub(1) as f32)
+            * YLILUOMA_COMPLEXITY_PENALTY_WEIGHT
+            * (1.0 + 1.2 * dark_factor)
+        + plan_transition_penalty(&plan) * YLILUOMA_PLAN_TRANSITION_WEIGHT
+        + if nearest_present {
+            0.0
+        } else {
+            nearest_palette_score.sqrt()
+                * YLILUOMA_NEAREST_PRESENCE_WEIGHT
+                * (0.4 + 0.9 * dark_factor + 0.4 * (1.0 - lightness))
+        };
+
+    (score, plan)
+}
+
+fn make_yliluoma_plan(r: u8, g: u8, b: u8) -> YliluomaMixPlan {
+    let target_lab = lab_components_from_rgb([r, g, b]);
+    let candidates = top_palette_candidates(target_lab, YLILUOMA_NEAREST_CANDIDATES);
+    let mut best_score = f32::INFINITY;
+    let mut best_plan = YliluomaMixPlan::default();
+
+    for &color in &candidates {
+        let (score, plan) = evaluate_mix(target_lab, &[(color, YLILUOMA_MIX_LEVELS)]);
+        if score < best_score {
+            best_score = score;
+            best_plan = plan;
+        }
+    }
+
+    for i in 0..candidates.len() {
+        for j in (i + 1)..candidates.len() {
+            for count_b in 0..=YLILUOMA_MIX_LEVELS {
+                let count_a = YLILUOMA_MIX_LEVELS - count_b;
+                let (score, plan) = evaluate_mix(
+                    target_lab,
+                    &[(candidates[i], count_a), (candidates[j], count_b)],
+                );
+                if score < best_score {
+                    best_score = score;
+                    best_plan = plan;
+                }
+            }
+        }
+    }
+
+    if candidates.len() == YLILUOMA_NEAREST_CANDIDATES {
+        for count_c in 0..=YLILUOMA_MIX_LEVELS {
+            for count_b in 0..=(YLILUOMA_MIX_LEVELS - count_c) {
+                let count_a = YLILUOMA_MIX_LEVELS - count_b - count_c;
+                let (score, plan) = evaluate_mix(
+                    target_lab,
+                    &[(candidates[0], count_a), (candidates[1], count_b), (candidates[2], count_c)],
+                );
+                if score < best_score {
+                    best_score = score;
+                    best_plan = plan;
+                }
+            }
+        }
+    }
+
+    best_plan
 }
 
 #[inline(always)]
@@ -256,6 +663,34 @@ pub(crate) fn quantize_blue_noise(img: &RgbImage, width: u32, height: u32) -> Ve
             let g = apply_bias(raw[src_base + 1], bias);
             let b = apply_bias(raw[src_base + 2], bias);
             output[idx] = nearest_color(r, g, b);
+        }
+    }
+
+    output
+}
+
+pub(crate) fn quantize_yliluoma(img: &RgbImage, width: u32, height: u32) -> Vec<u8> {
+    color_lut();
+    palette_linear();
+    palette_luma();
+
+    let width = width as usize;
+    let height = height as usize;
+    let raw = img.as_raw();
+    let mut output = vec![0u8; width * height];
+    let mut plan_cache = HashMap::new();
+
+    for y in 0..height {
+        for x in 0..width {
+            let idx = y * width + x;
+            let src_base = idx * 3;
+            let key = yliluoma_cache_key(raw[src_base], raw[src_base + 1], raw[src_base + 2]);
+            let plan = *plan_cache
+                .entry(key)
+                .or_insert_with(|| make_yliluoma_plan(raw[src_base], raw[src_base + 1], raw[src_base + 2]));
+            let threshold = BAYER_8X8[y & 7][x & 7] as usize;
+
+            output[idx] = plan.colors[threshold];
         }
     }
 
