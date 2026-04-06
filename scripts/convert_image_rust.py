@@ -51,7 +51,7 @@ def infer_format(output_path: str) -> str:
         '.bmp': 'bmp',
     }.get(suffix, 'bmp')
 
-def convert_image(input_path: str, output_path: str, width: int = 800, height: int = 480, halftone: str = 'auto'):
+def convert_image(input_path: str, output_path: str, width: int = 800, height: int = 480, halftone: str = 'auto', gamma: float = 1.0):
     """
     Convert an image to e-paper compatible format (Rust optimized).
 
@@ -61,6 +61,7 @@ def convert_image(input_path: str, output_path: str, width: int = 800, height: i
         width: Target width (default 800)
         height: Target height (default 480)
         halftone: Halftone algorithm (`bayer`, `blue-noise`, `atkinson`, `auto`)
+        gamma: Optional gamma correction (`1.0` keeps original, `<1` brightens, `>1` darkens)
     """
     ensure_binary()
 
@@ -72,7 +73,7 @@ def convert_image(input_path: str, output_path: str, width: int = 800, height: i
         "-f", infer_format(output_path),
     ]
 
-    cmd.extend(["--halftone", halftone])
+    cmd.extend(["--halftone", halftone, "--gamma", str(gamma)])
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -143,6 +144,10 @@ def main():
         help='Halftone algorithm (default: auto)'
     )
     parser.add_argument(
+        '--gamma', type=float, default=1.0,
+        help='Optional gamma correction (default: 1.0)'
+    )
+    parser.add_argument(
         '--buffer', action='store_true',
         help='Save raw buffer file (.bin)'
     )
@@ -160,6 +165,7 @@ def main():
     print(f"Converting {args.input}...")
     print(f"Target size: {args.width}x{args.height}")
     print(f"Halftone: {args.halftone}")
+    print(f"Gamma: {args.gamma}")
     print(f"Engine: Rust (high-performance)")
 
     start = time.perf_counter()
@@ -177,7 +183,7 @@ def main():
             "-f", args.format or infer_format(args.output),
         ]
 
-        cmd.extend(["--halftone", args.halftone])
+        cmd.extend(["--halftone", args.halftone, "--gamma", str(args.gamma)])
 
         result = subprocess.run(cmd)
 

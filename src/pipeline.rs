@@ -90,6 +90,7 @@ pub(crate) fn prepare_image(
     height: u32,
     resize_mode: ResizeMode,
     auto_rotate: bool,
+    gamma: f32,
 ) -> Result<RgbImage> {
     let img = image::open(path).with_context(|| format!("Failed to open: {}", path.display()))?;
 
@@ -99,7 +100,27 @@ pub(crate) fn prepare_image(
         img
     };
 
-    Ok(resize_with_mode(&oriented, width, height, resize_mode))
+    let mut rgb = resize_with_mode(&oriented, width, height, resize_mode);
+    apply_gamma_to_rgb_image(&mut rgb, gamma)?;
+    Ok(rgb)
+}
+
+pub(crate) fn apply_gamma_to_rgb_image(img: &mut RgbImage, gamma: f32) -> Result<()> {
+    anyhow::ensure!(gamma.is_finite() && gamma > 0.0, "Gamma must be a finite value greater than 0");
+
+    if (gamma - 1.0).abs() < f32::EPSILON {
+        return Ok(());
+    }
+
+    for pixel in img.pixels_mut() {
+        for channel in &mut pixel.0 {
+            let normalized = (*channel as f32) / 255.0;
+            let corrected = normalized.powf(gamma);
+            *channel = (corrected * 255.0).round().clamp(0.0, 255.0) as u8;
+        }
+    }
+
+    Ok(())
 }
 
 pub(crate) fn choose_halftone_mode(img: &RgbImage) -> HalftoneMode {

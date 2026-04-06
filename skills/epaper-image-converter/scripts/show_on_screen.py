@@ -35,7 +35,7 @@ def is_packed_buffer(path: Path) -> bool:
     return path.suffix.lower() == '.packed' and path.exists() and path.stat().st_size == PACKED_SIZE
 
 
-def convert_to_packed(image_path: str, *, halftone: str, resize_mode: str, benchmark: bool) -> Path:
+def convert_to_packed(image_path: str, *, halftone: str, resize_mode: str, gamma: float, benchmark: bool) -> Path:
     source = Path(image_path)
     if is_packed_buffer(source):
         print('Input is already a packed display buffer; skipping conversion.')
@@ -53,11 +53,12 @@ def convert_to_packed(image_path: str, *, halftone: str, resize_mode: str, bench
         '-f', 'packed',
         '--halftone', halftone,
         '--resize-mode', resize_mode,
+        '--gamma', str(gamma),
     ]
     if benchmark:
         cmd.append('--benchmark')
 
-    print(f'Converting image with halftone={halftone}, resize_mode={resize_mode} to packed buffer ...')
+    print(f'Converting image with halftone={halftone}, resize_mode={resize_mode}, gamma={gamma} to packed buffer ...')
     subprocess.run(cmd, check=True)
     return tmp_path
 
@@ -85,6 +86,7 @@ def display_image(
     *,
     halftone: str = 'auto',
     resize_mode: str = 'contain',
+    gamma: float = 1.0,
     benchmark: bool = False,
     clear: bool = False,
 ) -> None:
@@ -97,6 +99,7 @@ def display_image(
             image_path,
             halftone=halftone,
             resize_mode=resize_mode,
+            gamma=gamma,
             benchmark=benchmark,
         )
         if packed_path != Path(image_path):
@@ -126,6 +129,7 @@ def main() -> None:
     parser.add_argument('image', help='Path to the image file or .packed buffer')
     parser.add_argument('--halftone', choices=['bayer', 'blue-noise', 'atkinson', 'auto'], default='auto', help='Halftone strategy')
     parser.add_argument('--resize-mode', choices=['stretch', 'contain', 'cover'], default='contain', help='Resize strategy during conversion')
+    parser.add_argument('--gamma', type=float, default=1.0, help='Optional gamma correction during conversion (default: 1.0)')
     parser.add_argument('--benchmark', action='store_true', help='Print converter benchmark timing')
     parser.add_argument('--clear', action='store_true', help='Clear panel before display (disabled by default)')
     args = parser.parse_args()
@@ -138,6 +142,7 @@ def main() -> None:
         args.image,
         halftone=args.halftone,
         resize_mode=args.resize_mode,
+        gamma=args.gamma,
         benchmark=args.benchmark,
         clear=args.clear,
     )

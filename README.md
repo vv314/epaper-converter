@@ -70,6 +70,10 @@ epaper_converter convert input.jpg output.bin -f bin --halftone atkinson
   - `atkinson`：更克制的误差扩散，层次更锐利。**适合细节复杂、局部反差高的图像**。
   - `auto`：根据图像复杂度在 `bayer`、`blue-noise` 与 `atkinson` 之间自动选择。
 - `--resize-mode`：缩放策略（`contain`, `cover`, `stretch`，默认 `contain`）。
+- `--gamma`：可选 Gamma 校正参数，默认 `1.0`；`< 1.0` 提亮中间调，`> 1.0` 压暗中间调。
+  - 在 `auto` 模式下，Gamma 会先作用于预处理图像，再参与自动策略判断与后续量化。
+  - 建议从 `1.0` 起步：夜景、深色背景可尝试 `1.10 ~ 1.20`；高亮、浅底、叶片占比高的图片通常保持 `1.0` 更稳。
+  - 不建议大幅偏离 `1.0`；若超过 `0.85 ~ 1.20`，容易导致高光发白或暗部堵塞。
 - `-f, --format`：输出格式（`bmp`, `bin`, `packed`, `png`, `both`）。
 - `-b, --benchmark`：打印处理耗时。
 
@@ -78,6 +82,10 @@ epaper_converter convert input.jpg output.bin -f bin --halftone atkinson
 - **照片转换**（等比留白 + 自适应抖动）：
   ```bash
   epaper_converter convert photo.jpg frame.bin -f bin --halftone auto --resize-mode contain
+  ```
+- **夜景压暗一点**（保留暗部氛围）：
+  ```bash
+  epaper_converter convert photo.jpg night.png -f png --halftone auto --resize-mode cover --gamma 1.15
   ```
 - **壁纸转换**（中心裁剪铺满）：
   ```bash

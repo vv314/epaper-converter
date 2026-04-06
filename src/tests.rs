@@ -1,7 +1,7 @@
 use crate::cli::{HalftoneMode, ResizeMode};
 use crate::pipeline::{
-    check_epaper_format, choose_halftone_mode, indices_to_packed_buffer, palette_histogram_exact,
-    palette_histogram_nearest, prepare_image, resize_with_mode,
+    apply_gamma_to_rgb_image, check_epaper_format, choose_halftone_mode, indices_to_packed_buffer,
+    palette_histogram_exact, palette_histogram_nearest, prepare_image, resize_with_mode,
 };
 use crate::quantize::{
     quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_yliluoma, PALETTE,
@@ -73,6 +73,20 @@ fn auto_strategy_prefers_atkinson_for_complex_image() {
 }
 
 #[test]
+fn gamma_below_one_brightens_midtones() {
+    let mut img = ImageBuffer::from_pixel(1, 1, Rgb([128, 128, 128]));
+    apply_gamma_to_rgb_image(&mut img, 0.85).unwrap();
+    assert!(img.get_pixel(0, 0).0[0] > 128);
+}
+
+#[test]
+fn gamma_above_one_darkens_midtones() {
+    let mut img = ImageBuffer::from_pixel(1, 1, Rgb([128, 128, 128]));
+    apply_gamma_to_rgb_image(&mut img, 1.15).unwrap();
+    assert!(img.get_pixel(0, 0).0[0] < 128);
+}
+
+#[test]
 fn bayer_quantizer_preserves_dimensions_and_palette_range() {
     let img = ImageBuffer::from_fn(16, 16, |x, y| {
         Rgb([(x * 17) as u8, (y * 17) as u8, ((x + y) * 8) as u8])
@@ -130,7 +144,7 @@ fn yliluoma_quantizer_is_deterministic_and_in_palette() {
 
 #[test]
 fn yliluoma_preserves_blue_structure_for_starry_night_fixture() {
-    let img = prepare_image(&fixture_path("starry_night.jpg"), 800, 480, ResizeMode::Cover, true)
+    let img = prepare_image(&fixture_path("starry_night.jpg"), 800, 480, ResizeMode::Cover, true, 1.0)
         .expect("fixture should load");
     let indices = quantize_yliluoma(&img, 800, 480);
     let total = indices.len() as f32;

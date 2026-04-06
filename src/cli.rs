@@ -44,6 +44,9 @@ enum Commands {
         /// Apply EXIF orientation before resizing
         #[arg(long, default_value_t = true, action = ArgAction::Set)]
         auto_rotate: bool,
+        /// Apply a power-law gamma curve after resizing (1.0 keeps original; <1 brightens, >1 darkens)
+        #[arg(long, default_value = "1.0")]
+        gamma: f32,
         /// Output format
         #[arg(short, long, value_enum, default_value = "bmp")]
         format: OutputFormat,
@@ -180,10 +183,13 @@ pub fn run() -> Result<()> {
             halftone,
             resize_mode,
             auto_rotate,
+            gamma,
             format,
             benchmark,
         } => {
             let total_start = Instant::now();
+
+            anyhow::ensure!(gamma.is_finite() && gamma > 0.0, "Gamma must be a finite value greater than 0");
 
             if !benchmark {
                 println!("Loading: {}", input);
@@ -191,7 +197,7 @@ pub fn run() -> Result<()> {
             let load_start = Instant::now();
 
             let rgb_img =
-                prepare_image(Path::new(&input), width, height, resize_mode, auto_rotate)?;
+                prepare_image(Path::new(&input), width, height, resize_mode, auto_rotate, gamma)?;
 
             let load_time = load_start.elapsed();
 
@@ -369,7 +375,7 @@ pub fn run() -> Result<()> {
             resize_mode,
             auto_rotate,
         } => {
-            let source_img = prepare_image(Path::new(&source), width, height, resize_mode, auto_rotate)?;
+            let source_img = prepare_image(Path::new(&source), width, height, resize_mode, auto_rotate, 1.0)?;
             let rendered_img = image::open(&rendered)
                 .with_context(|| format!("Failed to open rendered image: {rendered}"))?
                 .to_rgb8();
