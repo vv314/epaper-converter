@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 120" width="380" height="120">
+  <defs>
+    <style>
+      .bg { fill: #f8f9fa; }
+      .screen { fill: none; stroke: #343a40; stroke-width: 6; rx: 6; }
+      .pixel { opacity: 0.85; }
+      .c-black { fill: #212529; }
+      .c-red { fill: #e03131; }
+      .c-yellow { fill: #fcc419; }
+      .c-blue { fill: #1c7ed6; }
+      .c-green { fill: #2f9e44; }
+      .text-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 800; font-size: 36px; }
+      .text-sub { font-family: monospace; font-size: 14px; fill: #868e96; }
+    </style>
+  </defs>
+
+  <!-- 简化的电子墨水屏极简轮廓 -->
+  <rect x="24" y="24" width="72" height="72" class="screen" />
+  
+  <!-- 抽象的墨水屏六色圆点排列 -->
+  <!-- 第一行 -->
+  <circle cx="44" cy="44" r="6" class="c-black pixel"/>
+  <circle cx="60" cy="44" r="6" class="c-red pixel"/>
+  <circle cx="76" cy="44" r="6" class="c-yellow pixel"/>
+  
+  <!-- 第二行 -->
+  <circle cx="44" cy="60" r="6" class="c-blue pixel"/>
+  <circle cx="60" cy="60" r="6" fill="#dee2e6" class="pixel"/> <!-- 白/灰 代表空白像素 -->
+  <circle cx="76" cy="60" r="6" class="c-green pixel"/>
+  
+  <!-- 第三行 -->
+  <circle cx="44" cy="76" r="6" class="c-red pixel"/>
+  <circle cx="60" cy="76" r="6" class="c-blue pixel"/>
+  <circle cx="76" cy="76" r="6" class="c-black pixel"/>
+
+  <!-- 标题运用六色调色板进行着色 e(蓝)P(红)a(黄)p(绿)e(蓝)r(红) Conv(黑) -->
+  <text x="124" y="58" class="text-title">
+    <tspan class="c-blue">e</tspan>
+    <tspan class="c-red">P</tspan>
+    <tspan class="c-yellow">a</tspan>
+    <tspan class="c-green">p</tspan>
+    <tspan class="c-blue">e</tspan>
+    <tspan class="c-red">r</tspan>
+    <tspan class="c-black">Conv</tspan>
+  </text>
+  <text x="126" y="82" class="text-sub">High Performance ACeP 6-Color</text>
+
+  <!-- Rust 标识跟着左移 -->
+  <circle cx="328" cy="46" r="12" fill="none" stroke="#e67700" stroke-width="2.5" stroke-dasharray="4,3"/>
+  <text x="328" y="50" font-family="sans-serif" font-weight="bold" font-size="10" fill="#e67700" text-anchor="middle">R</text>
+
+</svg>
