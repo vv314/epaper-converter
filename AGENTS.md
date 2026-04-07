@@ -12,14 +12,14 @@
 - 生成结果统一输出到项目根目录下的 `output/` 目录。
 - 缩放/裁剪模式固定使用 `cover`。
 - 为了能让 LLM 读取图片内容，输出格式固定为 `png`。
-- 文件命名格式固定为 `{原名}.cover.{算法}.png`。
+- 文件命名格式优先使用 `{原名}.cover.{算法}_{算法迭代标识}.png`；未设置迭代标识时，可回落为 `{原名}.cover.{算法}.png`。
 - 若通过测试 harness 批量生成产物，默认跑 `bayer`、`blue-noise`、`atkinson`、`burkes`、`yliluoma`，用于自动化批量对比。
 
 ### 命名示例
 
-- `gradient.cover.fast.png`
-- `gradient.cover.floyd.png`
-- `gradient.cover.blue-noise.png`
+- `gradient.cover.fast_v1.png`
+- `gradient.cover.floyd_v2.png`
+- `gradient.cover.blue-noise_rgb.png`
 
 ### 产物管理
 
@@ -27,6 +27,7 @@
 - `output/` 用于保存开发调试和算法对比产物，默认视为验证输出目录。
 - 重新生成一批对比图前，可先清空 `output/`，避免历史结果干扰判断。
 - 若需长期保留某轮算法对比结果，应通过明确的 `算法迭代标识` 区分，而不是覆盖旧文件。
+- harness 支持通过 `EPAPER_HARNESS_TAG` 注入 `算法迭代标识`，用于保留不同调优轮次的并排对比产物。
 - 测试 harness 已支持并行生成，适合批量扫描参数；若仅验证单个改动，优先缩小夹具和参数范围，避免无意义地跑满整套组合。
 
 ## 算法调优

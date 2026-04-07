@@ -16,6 +16,15 @@
 - 文件命名格式使用 `{原名}.cover.{算法}_{算法迭代标识}.png`。
 - `算法迭代标识` 可以使用版本号，如 `v1`、`v2`；也可以使用语义化标识，如 `rgb`、`lab`、`fastpath`。
 
+### Harness 使用方式
+
+- 直接运行 `cargo test harness_regenerates_cover_png_outputs -- --ignored` 时，harness 会生成默认命名产物，如 `gradient.cover.bayer.png`。
+- 若要保留某轮调优结果并与旧版本并排比较，运行前设置 `EPAPER_HARNESS_TAG`，例如 `EPAPER_HARNESS_TAG=v2 cargo test harness_regenerates_cover_png_outputs -- --ignored`。
+- 设置标识后，批量产物会追加后缀，如 `gradient.cover.bayer_v2.png`、`tree.cover.yliluoma_v2.png`。
+- `EPAPER_HARNESS_TAG` 会被规范化：字母统一转小写，空格与 `/`、`.` 会转成 `_`，例如 `Lab FastPath` 会落盘为 `lab_fastpath`。
+- 未设置 `EPAPER_HARNESS_TAG` 时，harness 只会覆盖当前默认文件名，不会再全量清空 `output/`；已存在的其他版本产物会被保留。
+- `gamma sweep` 同样支持该标识，例如 `EPAPER_HARNESS_TAG=lab cargo test harness_scans_gamma_candidates_and_prints_leaderboard -- --ignored`，输出形如 `gradient.cover.bayer_g100_lab.png`。
+
 ### 命名示例
 
 - `gradient.cover.fast_v1.png`

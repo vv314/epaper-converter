@@ -31,12 +31,12 @@ pub(super) use report::{
     format_leaderboard, format_mode_summary, format_recommendations, format_suite_report,
 };
 
-fn clear_output_dir() -> Result<()> {
+fn prune_output_dir_for_requests(requests: &[RenderRequest]) -> Result<()> {
     let dir = output_dir();
     fs::create_dir_all(&dir).context("Failed to create output directory")?;
 
-    for entry in fs::read_dir(&dir).context("Failed to read output directory")? {
-        let path = entry?.path();
+    for request in requests {
+        let path = output_path_for_request(request.fixture_name, &request.output_slug);
         if path.is_file() {
             fs::remove_file(&path)
                 .with_context(|| format!("Failed to remove output file: {}", path.display()))?;
@@ -44,6 +44,10 @@ fn clear_output_dir() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn output_path_for_request(fixture_name: &str, output_slug: &str) -> PathBuf {
+    output_dir().join(format!("{fixture_name}.cover.{output_slug}.png"))
 }
 
 fn quantize_image(img: &RgbImage, mode: HalftoneMode) -> Vec<u8> {
