@@ -3,9 +3,7 @@ use std::path::Path;
 use std::time::Instant;
 
 use crate::cli::args::{ConvertArgs, HalftoneMode, OutputFormat};
-use crate::pipeline::{
-    choose_halftone_mode, indices_to_rgb_image, prepare_image, save_bin_buffer, save_packed_buffer,
-};
+use crate::pipeline::{indices_to_rgb_image, prepare_image, save_bin_buffer, save_packed_buffer};
 use crate::quantize::{quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_yliluoma};
 
 use super::halftone_mode_label;
@@ -47,26 +45,17 @@ pub(in crate::cli) fn run(args: ConvertArgs) -> Result<()> {
 
     let load_time = load_start.elapsed();
 
-    let resolved_halftone = match halftone {
-        HalftoneMode::Auto => choose_halftone_mode(&rgb_img),
-        mode => mode,
-    };
-
     if !benchmark {
-        let mode_str = halftone_mode_label(resolved_halftone);
-        if halftone == HalftoneMode::Auto {
-            println!("Halftone strategy: auto -> {}", mode_str);
-        }
+        let mode_str = halftone_mode_label(halftone);
         println!("Converting ({} mode)...", mode_str);
     }
     let convert_start = Instant::now();
 
-    let indices = match resolved_halftone {
+    let indices = match halftone {
         HalftoneMode::Bayer => quantize_bayer(&rgb_img, width, height),
         HalftoneMode::BlueNoise => quantize_blue_noise(&rgb_img, width, height),
         HalftoneMode::Yliluoma => quantize_yliluoma(&rgb_img, width, height),
         HalftoneMode::Atkinson => quantize_atkinson(&rgb_img, width, height),
-        HalftoneMode::Auto => unreachable!(),
     };
 
     let convert_time = convert_start.elapsed();

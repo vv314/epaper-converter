@@ -84,7 +84,7 @@ def display_packed_buffer(packed_path: Path, *, clear: bool = False) -> None:
 def display_image(
     image_path: str,
     *,
-    halftone: str = 'auto',
+    halftone: str = 'bayer',
     resize_mode: str = 'contain',
     gamma: float = 1.0,
     benchmark: bool = False,
@@ -127,7 +127,7 @@ def display_image(
 def main() -> None:
     parser = argparse.ArgumentParser(description='Display an image on the 7.3inch e-Paper E screen')
     parser.add_argument('image', help='Path to the image file or .packed buffer')
-    parser.add_argument('--halftone', choices=['bayer', 'blue-noise', 'atkinson', 'auto'], default='auto', help='Halftone strategy')
+    parser.add_argument('--halftone', choices=['bayer', 'blue-noise', 'yliluoma', 'atkinson'], default='bayer', help='Halftone strategy')
     parser.add_argument('--resize-mode', choices=['stretch', 'contain', 'cover'], default='contain', help='Resize strategy during conversion')
     parser.add_argument('--gamma', type=float, default=1.0, help='Optional gamma correction during conversion (default: 1.0)')
     parser.add_argument('--benchmark', action='store_true', help='Print converter benchmark timing')

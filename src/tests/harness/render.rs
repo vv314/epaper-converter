@@ -4,7 +4,7 @@ use std::fs;
 use std::time::Instant;
 
 use crate::cli::{HalftoneMode, ResizeMode};
-use crate::pipeline::{choose_halftone_mode, prepare_image};
+use crate::pipeline::prepare_image;
 
 use super::{
     build_palette_report, clear_output_dir, fixture_path, output_dir, quantize_image,
@@ -73,8 +73,8 @@ pub(crate) fn render_fixture_to_output(
         gamma,
     )?;
 
-    let resolved_mode = choose_mode(requested_mode, &rgb_img);
-    let indices = quantize_image(&rgb_img, resolved_mode);
+    let resolved_mode = requested_mode;
+    let indices = quantize_image(&rgb_img, requested_mode);
     let rendered_img = super::indices_to_rgb_image(&indices, TARGET_WIDTH, TARGET_HEIGHT);
     let palette_report = build_palette_report(&rgb_img, &rendered_img);
 
@@ -109,11 +109,4 @@ fn render_requests_in_parallel(requests: Vec<RenderRequest>) -> Result<Vec<Rende
             )
         })
         .collect()
-}
-
-fn choose_mode(requested_mode: HalftoneMode, rgb_img: &image::RgbImage) -> HalftoneMode {
-    match requested_mode {
-        HalftoneMode::Auto => choose_halftone_mode(rgb_img),
-        mode => mode,
-    }
 }

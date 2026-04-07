@@ -51,7 +51,7 @@ def infer_format(output_path: str) -> str:
         '.bmp': 'bmp',
     }.get(suffix, 'bmp')
 
-def convert_image(input_path: str, output_path: str, width: int = 800, height: int = 480, halftone: str = 'auto', gamma: float = 1.0):
+def convert_image(input_path: str, output_path: str, width: int = 800, height: int = 480, halftone: str = 'bayer', gamma: float = 1.0):
     """
     Convert an image to e-paper compatible format (Rust optimized).
 
@@ -60,7 +60,7 @@ def convert_image(input_path: str, output_path: str, width: int = 800, height: i
         output_path: Path to save converted image
         width: Target width (default 800)
         height: Target height (default 480)
-        halftone: Halftone algorithm (`bayer`, `blue-noise`, `atkinson`, `auto`)
+        halftone: Halftone algorithm (`bayer`, `blue-noise`, `yliluoma`, `atkinson`)
         gamma: Optional gamma correction (`1.0` keeps original, `<1` brightens, `>1` darkens)
     """
     ensure_binary()
@@ -97,7 +97,7 @@ def create_display_buffer(image_path: str, width: int = 800, height: int = 480) 
 
     try:
         # Convert to e-paper format
-        convert_image(image_path, tmp_path, width, height, halftone='auto')
+        convert_image(image_path, tmp_path, width, height, halftone='bayer')
 
         # Load and convert to buffer
         img = Image.open(tmp_path).convert('RGB')
@@ -140,8 +140,8 @@ def main():
         help='Target height (default: 480)'
     )
     parser.add_argument(
-        '--halftone', choices=['bayer', 'blue-noise', 'atkinson', 'auto'], default='auto',
-        help='Halftone algorithm (default: auto)'
+        '--halftone', choices=['bayer', 'blue-noise', 'yliluoma', 'atkinson'], default='bayer',
+        help='Halftone algorithm (default: bayer)'
     )
     parser.add_argument(
         '--gamma', type=float, default=1.0,

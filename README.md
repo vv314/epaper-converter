@@ -29,7 +29,7 @@
 ## 功能概览
 
 - 使用 `Lanczos3` 进行高质量缩放。
-- 支持四种半色调模式：`bayer`、`blue-noise`、`atkinson`、`auto`（自适应）。
+- 支持四种显式半色调模式：`bayer`、`blue-noise`、`yliluoma`、`atkinson`。
 - 支持三种缩放策略：`contain`（等比留白）、`cover`（中心裁剪铺满）、`stretch`（强制拉伸）。
 - 默认读取 EXIF 信息校正图像方向。
 - **输入支持**：`JPEG`, `PNG`, `BMP`。
@@ -43,7 +43,7 @@
 
 ```bash
 cargo build --release
-epaper_converter convert input.jpg output.bin -f bin --halftone auto --resize-mode contain
+epaper_converter convert input.jpg output.bin -f bin --halftone bayer --resize-mode contain
 ```
 
 对于树莓派部署，推荐使用静态交叉编译：
@@ -67,11 +67,10 @@ epaper_converter convert input.jpg output.bin -f bin --halftone atkinson
 - `-m, --halftone`：半色调模式（默认 `bayer`）。
   - `bayer`：规则阈值矩阵抖动，画面更干净、速度更快。**适合大多数墨水屏预览与常规照片**。
   - `blue-noise`：蓝噪声阈值纹理，颗粒更细腻、规律感更弱。**适合渐变和大面积平滑过渡**。
+  - `yliluoma`：调色板感知的有序抖动，颜色混合更柔和。**适合需要兼顾层次与配色过渡的图像**。
   - `atkinson`：更克制的误差扩散，层次更锐利。**适合细节复杂、局部反差高的图像**。
-  - `auto`：根据图像复杂度在 `bayer`、`blue-noise` 与 `atkinson` 之间自动选择。
 - `--resize-mode`：缩放策略（`contain`, `cover`, `stretch`，默认 `contain`）。
 - `--gamma`：可选 Gamma 校正参数，默认 `1.0`；`< 1.0` 提亮中间调，`> 1.0` 压暗中间调。
-  - 在 `auto` 模式下，Gamma 会先作用于预处理图像，再参与自动策略判断与后续量化。
   - 建议从 `1.0` 起步：夜景、深色背景可尝试 `1.10 ~ 1.20`；高亮、浅底、叶片占比高的图片通常保持 `1.0` 更稳。
   - 不建议大幅偏离 `1.0`；若超过 `0.85 ~ 1.20`，容易导致高光发白或暗部堵塞。
 - `-f, --format`：输出格式（`bmp`, `bin`, `packed`, `png`, `both`）。
@@ -79,13 +78,13 @@ epaper_converter convert input.jpg output.bin -f bin --halftone atkinson
 
 **常见场景**：
 
-- **照片转换**（等比留白 + 自适应抖动）：
+- **照片转换**（等比留白 + 稳定预览）：
   ```bash
-  epaper_converter convert photo.jpg frame.bin -f bin --halftone auto --resize-mode contain
+  epaper_converter convert photo.jpg frame.bin -f bin --halftone bayer --resize-mode contain
   ```
 - **夜景压暗一点**（保留暗部氛围）：
   ```bash
-  epaper_converter convert photo.jpg night.png -f png --halftone auto --resize-mode cover --gamma 1.15
+  epaper_converter convert photo.jpg night.png -f png --halftone atkinson --resize-mode cover --gamma 1.15
   ```
 - **壁纸转换**（中心裁剪铺满）：
   ```bash

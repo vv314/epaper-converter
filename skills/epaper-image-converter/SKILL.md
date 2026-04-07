@@ -38,7 +38,7 @@ description: Convert and display images for Waveshare 7.3inch e-Paper E by calli
 ./scripts/epaper_converter convert input.jpg preview.bmp -f bmp --halftone bayer --resize-mode contain
 
 # 如果夜景想保留更多暗部氛围，可选传入 gamma 做轻微压暗
-./scripts/epaper_converter convert input.jpg night.png -f png --halftone auto --resize-mode cover --gamma 1.15
+./scripts/epaper_converter convert input.jpg night.png -f png --halftone atkinson --resize-mode cover --gamma 1.15
 ```
 
 > **提示**：你可以通过检查命令验证某张图片是否已满足严格的墨水屏规格要求：
@@ -76,11 +76,10 @@ description: Convert and display images for Waveshare 7.3inch e-Paper E by calli
 - `-m, --halftone`：半色调算法。
   - `bayer`：规则阈值矩阵抖动，默认方案，干净稳定。
   - `blue-noise`：蓝噪声阈值纹理，更适合渐变和细腻哑光质感。
+  - `yliluoma`：调色板感知的有序抖动，适合更柔和的颜色过渡。
   - `atkinson`：更锐利的误差扩散，适合高复杂度图像。
-  - `auto`：（默认选项）根据图像复杂度在 `bayer`、`blue-noise` 与 `atkinson` 间自动选择。
 - `--resize-mode`：排版策略。`contain`（等比留白）, `cover`（裁剪填满）, `stretch`（无视比例拉伸）
 - `--gamma`：可选 Gamma 校正参数，默认 `1.0`；`< 1.0` 提亮，`> 1.0` 压暗
-  - 在 `auto` 模式下，Gamma 会先影响预处理后的画面，再参与自动半色调选择。
   - 建议先用 `1.0`；夜景/深色题材可尝试 `1.10 ~ 1.20`，浅底或叶片很多的亮场图片通常保持 `1.0` 更稳。
   - 若需要人工确认，优先用同一原图并排对比 `1.0`、`1.15` 两个版本。
 - `--auto-rotate true|false`：是否按 EXIF 自动旋转

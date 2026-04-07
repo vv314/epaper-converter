@@ -1,7 +1,5 @@
 use std::fmt::Write;
 
-use crate::cli::HalftoneMode;
-
 use super::{
     compare_rendered_fixture, fastest_candidate, halftone_mode_slug, overall_best_candidate,
     ModeAggregateSummary, RankedCandidate, RenderedFixture, FIXTURE_NAMES, HARNESS_HALFTONE_CASES,
@@ -166,18 +164,6 @@ pub(crate) fn format_recommendations(rendered: &[RenderedFixture]) -> String {
             fastest.palette_report.total_abs_delta,
         );
     }
-
-    let leaders = rank_best_candidates_per_fixture(rendered);
-    let auto_wins = leaders
-        .iter()
-        .filter(|candidate| candidate.requested_mode == HalftoneMode::Auto)
-        .count();
-    let _ = writeln!(
-        report,
-        "Auto wins: {}/{} fixtures",
-        auto_wins,
-        leaders.len(),
-    );
 
     report
 }

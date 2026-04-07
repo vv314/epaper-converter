@@ -115,8 +115,6 @@ pub enum HalftoneMode {
     Yliluoma,
     /// Atkinson dithering - sharper diffusion with less gray haze than Floyd
     Atkinson,
-    /// Choose Bayer, Yliluoma, or Atkinson automatically based on image complexity
-    Auto,
 }
 
 #[derive(Default, Clone, Copy, Debug, ValueEnum, PartialEq, Eq)]

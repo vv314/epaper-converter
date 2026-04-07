@@ -50,7 +50,6 @@ fn quantize_image(img: &RgbImage, mode: HalftoneMode) -> Vec<u8> {
         HalftoneMode::BlueNoise => quantize_blue_noise(img, TARGET_WIDTH, TARGET_HEIGHT),
         HalftoneMode::Yliluoma => quantize_yliluoma(img, TARGET_WIDTH, TARGET_HEIGHT),
         HalftoneMode::Atkinson => quantize_atkinson(img, TARGET_WIDTH, TARGET_HEIGHT),
-        HalftoneMode::Auto => unreachable!(),
     }
 }
 
@@ -140,7 +139,6 @@ fn halftone_mode_slug(mode: HalftoneMode) -> &'static str {
         HalftoneMode::BlueNoise => "blue-noise",
         HalftoneMode::Yliluoma => "yliluoma",
         HalftoneMode::Atkinson => "atkinson",
-        HalftoneMode::Auto => "auto",
     }
 }
 

@@ -1,8 +1,8 @@
 use super::harness::TempImageFile;
-use crate::cli::{HalftoneMode, ResizeMode};
+use crate::cli::ResizeMode;
 use crate::pipeline::{
-    apply_gamma_to_rgb_image, check_epaper_format, choose_halftone_mode, indices_to_packed_buffer,
-    palette_histogram_exact, palette_histogram_nearest, resize_with_mode,
+    apply_gamma_to_rgb_image, check_epaper_format, indices_to_packed_buffer, palette_histogram_exact,
+    palette_histogram_nearest, resize_with_mode,
 };
 use crate::quantize::{
     quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_yliluoma, PALETTE,
@@ -31,29 +31,6 @@ fn cover_mode_fills_target_size() {
     let resized = resize_with_mode(&src, 8, 8, ResizeMode::Cover);
 
     assert_eq!(resized.dimensions(), (8, 8));
-}
-
-#[test]
-fn auto_strategy_prefers_bayer_for_flat_image() {
-    let img = ImageBuffer::from_pixel(64, 64, Rgb([255, 255, 255]));
-    assert_eq!(choose_halftone_mode(&img), HalftoneMode::Bayer);
-}
-
-#[test]
-fn auto_strategy_prefers_bayer_for_smooth_gradient() {
-    let img = ImageBuffer::from_fn(64, 64, |x, _| {
-        let value = (x * 4).min(255) as u8;
-        Rgb([value, value, 255])
-    });
-    assert_eq!(choose_halftone_mode(&img), HalftoneMode::Yliluoma);
-}
-
-#[test]
-fn auto_strategy_prefers_atkinson_for_complex_image() {
-    let img = ImageBuffer::from_fn(128, 128, |x, y| {
-        Rgb([(x * 2) as u8, (y * 2) as u8, ((x + y) % 256) as u8])
-    });
-    assert_eq!(choose_halftone_mode(&img), HalftoneMode::Atkinson);
 }
 
 #[test]

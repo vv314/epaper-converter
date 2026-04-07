@@ -20,8 +20,8 @@
 
 - `gradient.cover.fast_v1.png`
 - `gradient.cover.floyd_v2.png`
-- `gradient.cover.auto_rgb.png`
-- `gradient.cover.auto_lab.png`
+- `gradient.cover.blue-noise_rgb.png`
+- `gradient.cover.yliluoma_lab.png`
 
 ### 算法迭代标识规范
 
@@ -44,7 +44,7 @@
 
 - `src/tests/harness.rs` 视为算法调优的测试控制台：负责批量出图、参数扫描、排行榜、性能采样与 baseline regression 对比。
 - 默认 harness 目标是提升反馈效率，而不是穷举所有慢路径；新增重型算法或高成本参数扫描时，应优先设计为 `#[ignore]` 测试或单独入口。
-- 当需要批量比较 `gamma`、`halftone` 或自动策略时，优先复用现有 harness 报告能力，而不是手写临时脚本。
+- 当需要批量比较 `gamma` 或 `halftone` 时，优先复用现有 harness 报告能力，而不是手写临时脚本。
 - 当一次实验要作为后续回归基线时，应优先产出 baseline snapshot，并基于 snapshot 做 `improved` / `regressed` / `unchanged` 判断。
 - 若某项 harness 结果会被 agent 用于决策，报告中至少应包含：输入夹具、模式、关键质量指标、耗时，以及必要的推荐结论。
 
