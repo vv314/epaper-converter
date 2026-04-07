@@ -1,8 +1,8 @@
 use image::RgbImage;
 use std::sync::OnceLock;
 
-use super::color::{ciede2000_distance_sq, lab_components_from_rgb, palette_luma, PALETTE};
 use super::ordered::ordered_threshold_8x8;
+use super::palette::{ciede2000_distance_sq, lab_components_from_rgb, palette_luma, PALETTE};
 
 const YLILUOMA_CACHE_BITS: u8 = 6;
 const YLILUOMA_PLAN_SIZE: usize = 8;

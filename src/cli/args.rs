@@ -35,12 +35,7 @@ pub(super) struct ConvertArgs {
     #[arg(short = 'H', long, default_value = "480")]
     pub(super) height: u32,
     /// Dither mode
-    #[arg(
-        short = 'd',
-        long = "dither",
-        value_enum,
-        default_value = "bayer"
-    )]
+    #[arg(short = 'd', long = "dither", value_enum, default_value = "bayer")]
     pub(super) dither: DitherMode,
     /// Resize strategy for fitting image into the target canvas
     #[arg(long, value_enum, default_value = "contain")]

@@ -1,84 +1,13 @@
 use image::RgbImage;
 
-use super::color::{nearest_color, warm_up_color_lut, PALETTE};
+use super::palette::{nearest_color, warm_up_color_lut, PALETTE};
 
 #[derive(Clone, Copy)]
-struct ErrorTap {
-    dx: i32,
-    dy: usize,
-    weight: i32,
+pub(super) struct ErrorTap {
+    pub(super) dx: i32,
+    pub(super) dy: usize,
+    pub(super) weight: i32,
 }
-
-const ATKINSON_TAPS: [ErrorTap; 6] = [
-    ErrorTap {
-        dx: 1,
-        dy: 0,
-        weight: 1,
-    },
-    ErrorTap {
-        dx: 2,
-        dy: 0,
-        weight: 1,
-    },
-    ErrorTap {
-        dx: -1,
-        dy: 1,
-        weight: 1,
-    },
-    ErrorTap {
-        dx: 0,
-        dy: 1,
-        weight: 1,
-    },
-    ErrorTap {
-        dx: 1,
-        dy: 1,
-        weight: 1,
-    },
-    ErrorTap {
-        dx: 0,
-        dy: 2,
-        weight: 1,
-    },
-];
-
-const BURKES_TAPS: [ErrorTap; 7] = [
-    ErrorTap {
-        dx: 1,
-        dy: 0,
-        weight: 8,
-    },
-    ErrorTap {
-        dx: 2,
-        dy: 0,
-        weight: 4,
-    },
-    ErrorTap {
-        dx: -2,
-        dy: 1,
-        weight: 2,
-    },
-    ErrorTap {
-        dx: -1,
-        dy: 1,
-        weight: 4,
-    },
-    ErrorTap {
-        dx: 0,
-        dy: 1,
-        weight: 8,
-    },
-    ErrorTap {
-        dx: 1,
-        dy: 1,
-        weight: 4,
-    },
-    ErrorTap {
-        dx: 2,
-        dy: 1,
-        weight: 2,
-    },
-];
 
 #[inline(always)]
 fn clamp_scaled_to_u8(value: i32, scale: i32) -> u8 {
@@ -94,14 +23,6 @@ fn distribute_error(error: i32, numerator: i32, denominator: i32) -> i32 {
     } else {
         (scaled - denominator / 2) / denominator
     }
-}
-
-pub(crate) fn quantize_atkinson(img: &RgbImage, width: u32, height: u32) -> Vec<u8> {
-    quantize_error_diffusion(img, width, height, &ATKINSON_TAPS, 8)
-}
-
-pub(crate) fn quantize_burkes(img: &RgbImage, width: u32, height: u32) -> Vec<u8> {
-    quantize_error_diffusion(img, width, height, &BURKES_TAPS, 32)
 }
 
 fn process_error_diffusion_pixel(
@@ -157,7 +78,7 @@ fn process_error_diffusion_pixel(
     }
 }
 
-fn quantize_error_diffusion(
+pub(super) fn quantize_error_diffusion(
     img: &RgbImage,
     width: u32,
     height: u32,

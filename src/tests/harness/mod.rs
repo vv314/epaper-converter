@@ -16,8 +16,8 @@ use crate::quantize::{
 };
 
 pub(super) use config::{
-    TempImageFile, DEFAULT_GAMMA, FIXTURE_NAMES, GAMMA_CASES, HARNESS_DITHER_CASES,
-    TARGET_HEIGHT, TARGET_WIDTH,
+    TempImageFile, DEFAULT_GAMMA, FIXTURE_NAMES, GAMMA_CASES, HARNESS_DITHER_CASES, TARGET_HEIGHT,
+    TARGET_WIDTH,
 };
 pub(super) use model::{
     BaselineEntry, ModeAggregateSummary, PaletteReportSummary, RankedCandidate,
