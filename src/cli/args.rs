@@ -34,9 +34,14 @@ pub(super) struct ConvertArgs {
     /// Target height (default: 480)
     #[arg(short = 'H', long, default_value = "480")]
     pub(super) height: u32,
-    /// Halftone mode
-    #[arg(short = 'm', long = "halftone", value_enum, default_value = "bayer")]
-    pub(super) halftone: HalftoneMode,
+    /// Dither mode
+    #[arg(
+        short = 'd',
+        long = "dither",
+        value_enum,
+        default_value = "bayer"
+    )]
+    pub(super) dither: DitherMode,
     /// Resize strategy for fitting image into the target canvas
     #[arg(long, value_enum, default_value = "contain")]
     pub(super) resize_mode: ResizeMode,
@@ -105,7 +110,7 @@ pub(super) struct PaletteReportArgs {
 }
 
 #[derive(Default, Clone, Copy, Debug, ValueEnum, PartialEq, Eq)]
-pub enum HalftoneMode {
+pub enum DitherMode {
     /// Bayer ordered dithering - cleaner and more stable on e-paper panels
     #[default]
     Bayer,

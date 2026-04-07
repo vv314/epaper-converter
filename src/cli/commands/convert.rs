@@ -2,13 +2,13 @@ use anyhow::{Context, Result};
 use std::path::Path;
 use std::time::Instant;
 
-use crate::cli::args::{ConvertArgs, HalftoneMode, OutputFormat};
+use crate::cli::args::{ConvertArgs, DitherMode, OutputFormat};
 use crate::pipeline::{indices_to_rgb_image, prepare_image, save_bin_buffer, save_packed_buffer};
 use crate::quantize::{
     quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_burkes, quantize_yliluoma,
 };
 
-use super::halftone_mode_label;
+use super::dither_mode_label;
 
 pub(in crate::cli) fn run(args: ConvertArgs) -> Result<()> {
     let ConvertArgs {
@@ -16,7 +16,7 @@ pub(in crate::cli) fn run(args: ConvertArgs) -> Result<()> {
         output,
         width,
         height,
-        halftone,
+        dither,
         resize_mode,
         auto_rotate,
         gamma,
@@ -48,17 +48,17 @@ pub(in crate::cli) fn run(args: ConvertArgs) -> Result<()> {
     let load_time = load_start.elapsed();
 
     if !benchmark {
-        let mode_str = halftone_mode_label(halftone);
+        let mode_str = dither_mode_label(dither);
         println!("Converting ({} mode)...", mode_str);
     }
     let convert_start = Instant::now();
 
-    let indices = match halftone {
-        HalftoneMode::Bayer => quantize_bayer(&rgb_img, width, height),
-        HalftoneMode::BlueNoise => quantize_blue_noise(&rgb_img, width, height),
-        HalftoneMode::Yliluoma => quantize_yliluoma(&rgb_img, width, height),
-        HalftoneMode::Atkinson => quantize_atkinson(&rgb_img, width, height),
-        HalftoneMode::Burkes => quantize_burkes(&rgb_img, width, height),
+    let indices = match dither {
+        DitherMode::Bayer => quantize_bayer(&rgb_img, width, height),
+        DitherMode::BlueNoise => quantize_blue_noise(&rgb_img, width, height),
+        DitherMode::Yliluoma => quantize_yliluoma(&rgb_img, width, height),
+        DitherMode::Atkinson => quantize_atkinson(&rgb_img, width, height),
+        DitherMode::Burkes => quantize_burkes(&rgb_img, width, height),
     };
 
     let convert_time = convert_start.elapsed();

@@ -43,7 +43,7 @@
 
 ```bash
 cargo build --release
-epaper_converter convert input.jpg output.bin -f bin --halftone bayer --resize-mode contain
+epaper_converter convert input.jpg output.bin -f bin --dither bayer --resize-mode contain
 ```
 
 对于树莓派部署，推荐使用静态交叉编译：
@@ -58,13 +58,13 @@ scp target/aarch64-unknown-linux-musl/release/epaper_converter pi@<ip>:/usr/loca
 ### 图片转换 (`convert`)
 
 ```bash
-epaper_converter convert input.jpg output.bin -f bin --halftone atkinson
+epaper_converter convert input.jpg output.bin -f bin --dither atkinson
 ```
 
 **核心参数**：
 
 - `-w, --width` / `-H, --height`：目标分辨率（默认 `800x480`）。
-- `-m, --halftone`：半色调模式（默认 `bayer`）。
+- `-d, --dither`：抖动模式（默认 `bayer`）。
   - `bayer`：规则阈值矩阵抖动，画面更干净、速度更快。**适合大多数墨水屏预览与常规照片**。
   - `blue-noise`：蓝噪声阈值纹理，颗粒更细腻、规律感更弱。**适合渐变和大面积平滑过渡**。
   - `yliluoma`：调色板感知的有序抖动，颜色混合更柔和。**适合需要兼顾层次与配色过渡的图像**。
@@ -81,11 +81,11 @@ epaper_converter convert input.jpg output.bin -f bin --halftone atkinson
 
 - **照片转换**（等比留白 + 稳定预览）：
   ```bash
-  epaper_converter convert photo.jpg frame.bin -f bin --halftone bayer --resize-mode contain
+  epaper_converter convert photo.jpg frame.bin -f bin --dither bayer --resize-mode contain
   ```
 - **夜景压暗一点**（保留暗部氛围）：
   ```bash
-  epaper_converter convert photo.jpg night.png -f png --halftone atkinson --resize-mode cover --gamma 1.15
+  epaper_converter convert photo.jpg night.png -f png --dither atkinson --resize-mode cover --gamma 1.15
   ```
 - **壁纸转换**（中心裁剪铺满）：
   ```bash
@@ -93,7 +93,7 @@ epaper_converter convert input.jpg output.bin -f bin --halftone atkinson
   ```
 - **快速生成预览图**：
   ```bash
-  epaper_converter convert photo.jpg preview.bmp -f bmp --halftone bayer
+  epaper_converter convert photo.jpg preview.bmp -f bmp --dither bayer
   ```
 
 ### 格式检查 (`check`)

@@ -9,14 +9,14 @@ use image::RgbImage;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::cli::HalftoneMode;
+use crate::cli::DitherMode;
 use crate::pipeline::{indices_to_rgb_image, palette_histogram_exact, palette_histogram_nearest};
 use crate::quantize::{
     quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_burkes, quantize_yliluoma,
 };
 
 pub(super) use config::{
-    TempImageFile, DEFAULT_GAMMA, FIXTURE_NAMES, GAMMA_CASES, HARNESS_HALFTONE_CASES,
+    TempImageFile, DEFAULT_GAMMA, FIXTURE_NAMES, GAMMA_CASES, HARNESS_DITHER_CASES,
     TARGET_HEIGHT, TARGET_WIDTH,
 };
 pub(super) use model::{
@@ -50,13 +50,13 @@ fn output_path_for_request(fixture_name: &str, output_slug: &str) -> PathBuf {
     output_dir().join(format!("{fixture_name}.cover.{output_slug}.png"))
 }
 
-fn quantize_image(img: &RgbImage, mode: HalftoneMode) -> Vec<u8> {
+fn quantize_image(img: &RgbImage, mode: DitherMode) -> Vec<u8> {
     match mode {
-        HalftoneMode::Bayer => quantize_bayer(img, TARGET_WIDTH, TARGET_HEIGHT),
-        HalftoneMode::BlueNoise => quantize_blue_noise(img, TARGET_WIDTH, TARGET_HEIGHT),
-        HalftoneMode::Yliluoma => quantize_yliluoma(img, TARGET_WIDTH, TARGET_HEIGHT),
-        HalftoneMode::Atkinson => quantize_atkinson(img, TARGET_WIDTH, TARGET_HEIGHT),
-        HalftoneMode::Burkes => quantize_burkes(img, TARGET_WIDTH, TARGET_HEIGHT),
+        DitherMode::Bayer => quantize_bayer(img, TARGET_WIDTH, TARGET_HEIGHT),
+        DitherMode::BlueNoise => quantize_blue_noise(img, TARGET_WIDTH, TARGET_HEIGHT),
+        DitherMode::Yliluoma => quantize_yliluoma(img, TARGET_WIDTH, TARGET_HEIGHT),
+        DitherMode::Atkinson => quantize_atkinson(img, TARGET_WIDTH, TARGET_HEIGHT),
+        DitherMode::Burkes => quantize_burkes(img, TARGET_WIDTH, TARGET_HEIGHT),
     }
 }
 
@@ -124,7 +124,7 @@ fn score_key(case: &RenderedFixture) -> (u64, i64, i64, &'static str, &'static s
         (case.palette_report.total_abs_delta * 100.0).round() as i64,
         (case.palette_report.max_abs_delta * 100.0).round() as i64,
         case.gamma_slug,
-        halftone_mode_slug(case.requested_mode),
+        dither_mode_slug(case.requested_mode),
     )
 }
 
@@ -140,13 +140,13 @@ fn palette_label(idx: usize) -> &'static str {
     }
 }
 
-fn halftone_mode_slug(mode: HalftoneMode) -> &'static str {
+fn dither_mode_slug(mode: DitherMode) -> &'static str {
     match mode {
-        HalftoneMode::Bayer => "bayer",
-        HalftoneMode::BlueNoise => "blue-noise",
-        HalftoneMode::Yliluoma => "yliluoma",
-        HalftoneMode::Atkinson => "atkinson",
-        HalftoneMode::Burkes => "burkes",
+        DitherMode::Bayer => "bayer",
+        DitherMode::BlueNoise => "blue-noise",
+        DitherMode::Yliluoma => "yliluoma",
+        DitherMode::Atkinson => "atkinson",
+        DitherMode::Burkes => "burkes",
     }
 }
 

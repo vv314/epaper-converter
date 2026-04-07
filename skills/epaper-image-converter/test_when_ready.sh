@@ -23,12 +23,12 @@ ls -lh "$BINARY"
 
 echo
 echo "== convert(bin, auto) =="
-"$BINARY" convert "$INPUT" "$OUT_BIN" -f bin --halftone auto --resize-mode contain -b
+"$BINARY" convert "$INPUT" "$OUT_BIN" -f bin --dither auto --resize-mode contain -b
 ls -lh "$OUT_BIN"
 
 echo
 echo "== convert(bmp, atkinson) =="
-"$BINARY" convert "$INPUT" "$OUT_BMP" -f bmp --halftone atkinson --resize-mode contain -b
+"$BINARY" convert "$INPUT" "$OUT_BMP" -f bmp --dither atkinson --resize-mode contain -b
 ls -lh "$OUT_BMP"
 
 echo

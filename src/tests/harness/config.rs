@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::cli::HalftoneMode;
+use crate::cli::DitherMode;
 
 pub(crate) const TARGET_WIDTH: u32 = 800;
 pub(crate) const TARGET_HEIGHT: u32 = 480;
@@ -10,19 +10,19 @@ pub(crate) const DEFAULT_GAMMA: f32 = 1.0;
 pub(crate) const FIXTURE_NAMES: [&str; 3] = ["gradient", "starry_night", "tree"];
 pub(crate) const GAMMA_CASES: [(f32, &str); 3] = [(0.85, "g085"), (1.0, "g100"), (1.15, "g115")];
 #[allow(dead_code)]
-pub(crate) const HALFTONE_CASES: [(HalftoneMode, &str); 5] = [
-    (HalftoneMode::Bayer, "bayer"),
-    (HalftoneMode::BlueNoise, "blue-noise"),
-    (HalftoneMode::Atkinson, "atkinson"),
-    (HalftoneMode::Burkes, "burkes"),
-    (HalftoneMode::Yliluoma, "yliluoma"),
+pub(crate) const DITHER_CASES: [(DitherMode, &str); 5] = [
+    (DitherMode::Bayer, "bayer"),
+    (DitherMode::BlueNoise, "blue-noise"),
+    (DitherMode::Atkinson, "atkinson"),
+    (DitherMode::Burkes, "burkes"),
+    (DitherMode::Yliluoma, "yliluoma"),
 ];
-pub(crate) const HARNESS_HALFTONE_CASES: [(HalftoneMode, &str); 5] = [
-    (HalftoneMode::Bayer, "bayer"),
-    (HalftoneMode::BlueNoise, "blue-noise"),
-    (HalftoneMode::Atkinson, "atkinson"),
-    (HalftoneMode::Burkes, "burkes"),
-    (HalftoneMode::Yliluoma, "yliluoma"),
+pub(crate) const HARNESS_DITHER_CASES: [(DitherMode, &str); 5] = [
+    (DitherMode::Bayer, "bayer"),
+    (DitherMode::BlueNoise, "blue-noise"),
+    (DitherMode::Atkinson, "atkinson"),
+    (DitherMode::Burkes, "burkes"),
+    (DitherMode::Yliluoma, "yliluoma"),
 ];
 
 pub(crate) struct TempImageFile {

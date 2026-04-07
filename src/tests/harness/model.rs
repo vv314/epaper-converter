@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 
-use crate::cli::HalftoneMode;
+use crate::cli::DitherMode;
 
 pub(crate) struct RenderedFixture {
     pub(crate) fixture_name: &'static str,
     pub(crate) gamma: f32,
     pub(crate) gamma_slug: &'static str,
-    pub(crate) requested_mode: HalftoneMode,
-    pub(crate) resolved_mode: HalftoneMode,
+    pub(crate) requested_mode: DitherMode,
+    pub(crate) resolved_mode: DitherMode,
     pub(crate) elapsed_ms: u128,
     pub(crate) output_path: PathBuf,
     pub(crate) palette_report: PaletteReportSummary,
@@ -18,14 +18,14 @@ pub(crate) struct RankedCandidate<'a> {
     pub(crate) fixture_name: &'static str,
     pub(crate) gamma: f32,
     pub(crate) gamma_slug: &'static str,
-    pub(crate) requested_mode: HalftoneMode,
-    pub(crate) resolved_mode: HalftoneMode,
+    pub(crate) requested_mode: DitherMode,
+    pub(crate) resolved_mode: DitherMode,
     pub(crate) elapsed_ms: u128,
     pub(crate) palette_report: &'a PaletteReportSummary,
 }
 
 pub(crate) struct ModeAggregateSummary {
-    pub(crate) requested_mode: HalftoneMode,
+    pub(crate) requested_mode: DitherMode,
     pub(crate) avg_total_abs_delta: f64,
     pub(crate) avg_max_abs_delta: f64,
     pub(crate) avg_elapsed_ms: f64,
@@ -71,7 +71,7 @@ pub(crate) struct BaselineEntry {
 
 pub(crate) struct RenderRequest {
     pub(crate) fixture_name: &'static str,
-    pub(crate) requested_mode: HalftoneMode,
+    pub(crate) requested_mode: DitherMode,
     pub(crate) output_slug: String,
     pub(crate) gamma: f32,
     pub(crate) gamma_slug: &'static str,

@@ -5,7 +5,7 @@ use anyhow::Result;
 use clap::Parser;
 
 use args::{Cli, Commands};
-pub use args::{HalftoneMode, ResizeMode};
+pub use args::{DitherMode, ResizeMode};
 
 pub fn run() -> Result<()> {
     let cli = Cli::parse();

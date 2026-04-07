@@ -1,7 +1,7 @@
 use super::harness::{
-    self, FIXTURE_NAMES, GAMMA_CASES, HARNESS_HALFTONE_CASES, TARGET_HEIGHT, TARGET_WIDTH,
+    self, FIXTURE_NAMES, GAMMA_CASES, HARNESS_DITHER_CASES, TARGET_HEIGHT, TARGET_WIDTH,
 };
-use crate::cli::HalftoneMode;
+use crate::cli::DitherMode;
 
 #[test]
 #[ignore = "Generates `output/` preview fixtures for manual algorithm review"]
@@ -12,7 +12,7 @@ fn harness_regenerates_cover_png_outputs() -> anyhow::Result<()> {
 
     assert_eq!(
         rendered.len(),
-        FIXTURE_NAMES.len() * HARNESS_HALFTONE_CASES.len(),
+        FIXTURE_NAMES.len() * HARNESS_DITHER_CASES.len(),
         "expected harness to render every fixture/mode combination"
     );
     assert!(rendered.iter().all(|case| case.output_path.is_file()));
@@ -33,7 +33,7 @@ fn harness_regenerates_cover_png_outputs() -> anyhow::Result<()> {
 fn harness_uses_panel_target_dimensions() -> anyhow::Result<()> {
     let rendered = harness::render_fixture_to_output(
         "gradient",
-        HalftoneMode::Bayer,
+        DitherMode::Bayer,
         "bayer_test",
         1.0,
         "g100",
@@ -50,7 +50,7 @@ fn harness_uses_panel_target_dimensions() -> anyhow::Result<()> {
 fn harness_formats_palette_summary_for_humans() -> anyhow::Result<()> {
     let rendered = harness::render_fixture_to_output(
         "gradient",
-        HalftoneMode::Bayer,
+        DitherMode::Bayer,
         "bayer_summary",
         1.0,
         "g100",
@@ -74,21 +74,21 @@ fn harness_formats_fixture_leaderboard() -> anyhow::Result<()> {
     let rendered = vec![
         harness::render_fixture_to_output(
             "gradient",
-            HalftoneMode::Bayer,
+            DitherMode::Bayer,
             "bayer_rank",
             1.0,
             "g100",
         )?,
         harness::render_fixture_to_output(
             "gradient",
-            HalftoneMode::Atkinson,
+            DitherMode::Atkinson,
             "atkinson_rank",
             1.15,
             "g115",
         )?,
         harness::render_fixture_to_output(
             "tree",
-            HalftoneMode::BlueNoise,
+            DitherMode::BlueNoise,
             "blue_rank",
             0.85,
             "g085",
@@ -115,21 +115,21 @@ fn harness_formats_mode_summary_and_recommendations() -> anyhow::Result<()> {
     let rendered = vec![
         harness::render_fixture_to_output(
             "gradient",
-            HalftoneMode::Bayer,
+            DitherMode::Bayer,
             "bayer_perf",
             1.0,
             "g100",
         )?,
         harness::render_fixture_to_output(
             "gradient",
-            HalftoneMode::BlueNoise,
+            DitherMode::BlueNoise,
             "blue_perf",
             0.85,
             "g085",
         )?,
         harness::render_fixture_to_output(
             "tree",
-            HalftoneMode::Atkinson,
+            DitherMode::Atkinson,
             "atkinson_perf",
             1.15,
             "g115",
@@ -159,14 +159,14 @@ fn harness_builds_and_compares_baseline_snapshot() -> anyhow::Result<()> {
     let rendered = vec![
         harness::render_fixture_to_output(
             "gradient",
-            HalftoneMode::Bayer,
+            DitherMode::Bayer,
             "bayer_base",
             1.0,
             "g100",
         )?,
         harness::render_fixture_to_output(
             "tree",
-            HalftoneMode::BlueNoise,
+            DitherMode::BlueNoise,
             "blue_base",
             0.85,
             "g085",
@@ -196,7 +196,7 @@ fn harness_builds_and_compares_baseline_snapshot() -> anyhow::Result<()> {
 fn harness_detects_regression_from_snapshot_text() -> anyhow::Result<()> {
     let rendered = vec![harness::render_fixture_to_output(
         "gradient",
-        HalftoneMode::Bayer,
+        DitherMode::Bayer,
         "bayer_regression",
         1.0,
         "g100",
@@ -232,7 +232,7 @@ fn harness_scans_gamma_candidates_and_prints_leaderboard() -> anyhow::Result<()>
 
     assert_eq!(
         rendered.len(),
-        FIXTURE_NAMES.len() * HARNESS_HALFTONE_CASES.len() * GAMMA_CASES.len(),
+        FIXTURE_NAMES.len() * HARNESS_DITHER_CASES.len() * GAMMA_CASES.len(),
         "expected gamma sweep to cover every fixture/mode/gamma combination"
     );
     assert!(rendered.iter().all(|case| case.output_path.is_file()));

@@ -3,13 +3,13 @@ use rayon::prelude::*;
 use std::fs;
 use std::time::Instant;
 
-use crate::cli::{HalftoneMode, ResizeMode};
+use crate::cli::{DitherMode, ResizeMode};
 use crate::pipeline::prepare_image;
 
 use super::{
     build_palette_report, fixture_path, output_dir, output_path_for_request,
     prune_output_dir_for_requests, quantize_image, RenderRequest, RenderedFixture, DEFAULT_GAMMA,
-    FIXTURE_NAMES, GAMMA_CASES, HARNESS_HALFTONE_CASES, TARGET_HEIGHT, TARGET_WIDTH,
+    FIXTURE_NAMES, GAMMA_CASES, HARNESS_DITHER_CASES, TARGET_HEIGHT, TARGET_WIDTH,
 };
 
 const HARNESS_ARTIFACT_TAG_ENV: &str = "EPAPER_HARNESS_TAG";
@@ -24,9 +24,9 @@ pub(crate) fn render_standard_suite_with_tag(
 ) -> Result<Vec<RenderedFixture>> {
     let normalized_tag = sanitize_artifact_tag(artifact_tag);
 
-    let mut requests = Vec::with_capacity(FIXTURE_NAMES.len() * HARNESS_HALFTONE_CASES.len());
+    let mut requests = Vec::with_capacity(FIXTURE_NAMES.len() * HARNESS_DITHER_CASES.len());
     for fixture_name in FIXTURE_NAMES {
-        for (requested_mode, slug) in HARNESS_HALFTONE_CASES {
+        for (requested_mode, slug) in HARNESS_DITHER_CASES {
             requests.push(RenderRequest {
                 fixture_name,
                 requested_mode,
@@ -52,9 +52,9 @@ pub(crate) fn render_gamma_sweep_with_tag(
     let normalized_tag = sanitize_artifact_tag(artifact_tag);
 
     let mut requests =
-        Vec::with_capacity(FIXTURE_NAMES.len() * HARNESS_HALFTONE_CASES.len() * GAMMA_CASES.len());
+        Vec::with_capacity(FIXTURE_NAMES.len() * HARNESS_DITHER_CASES.len() * GAMMA_CASES.len());
     for fixture_name in FIXTURE_NAMES {
-        for (requested_mode, mode_slug) in HARNESS_HALFTONE_CASES {
+        for (requested_mode, mode_slug) in HARNESS_DITHER_CASES {
             for (gamma, gamma_slug) in GAMMA_CASES {
                 requests.push(RenderRequest {
                     fixture_name,
@@ -76,7 +76,7 @@ pub(crate) fn render_gamma_sweep_with_tag(
 
 pub(crate) fn render_fixture_to_output(
     fixture_name: &'static str,
-    requested_mode: HalftoneMode,
+    requested_mode: DitherMode,
     output_slug: &str,
     gamma: f32,
     gamma_slug: &'static str,
@@ -186,7 +186,7 @@ fn sanitize_artifact_tag(raw: Option<&str>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::HalftoneMode;
+    use crate::cli::DitherMode;
 
     #[test]
     fn sanitize_artifact_tag_keeps_readable_iteration_names() {
@@ -216,7 +216,7 @@ mod tests {
     fn prune_output_dir_only_removes_files_for_current_requests() -> Result<()> {
         let request = RenderRequest {
             fixture_name: "gradient",
-            requested_mode: HalftoneMode::Bayer,
+            requested_mode: DitherMode::Bayer,
             output_slug: "bayer_vnext".to_string(),
             gamma: 1.0,
             gamma_slug: "g100",

@@ -3,7 +3,7 @@ pub(super) mod check;
 pub(super) mod convert;
 pub(super) mod palette_report;
 
-use super::args::HalftoneMode;
+use super::args::DitherMode;
 
 pub(super) use benchmark::run as run_benchmark;
 pub(super) use check::run as run_check;
@@ -11,13 +11,13 @@ pub(super) use convert::run as run_convert;
 pub(super) use palette_report::run as run_palette_report;
 
 #[inline(always)]
-pub(super) fn halftone_mode_label(mode: HalftoneMode) -> &'static str {
+pub(super) fn dither_mode_label(mode: DitherMode) -> &'static str {
     match mode {
-        HalftoneMode::Bayer => "Bayer ordered dithering",
-        HalftoneMode::BlueNoise => "Blue noise dithering",
-        HalftoneMode::Yliluoma => "Yliluoma ordered dithering",
-        HalftoneMode::Atkinson => "Atkinson dithering",
-        HalftoneMode::Burkes => "Burkes dithering",
+        DitherMode::Bayer => "Bayer ordered dithering",
+        DitherMode::BlueNoise => "Blue noise dithering",
+        DitherMode::Yliluoma => "Yliluoma ordered dithering",
+        DitherMode::Atkinson => "Atkinson dithering",
+        DitherMode::Burkes => "Burkes dithering",
     }
 }
 

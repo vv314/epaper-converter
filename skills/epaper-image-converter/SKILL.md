@@ -32,13 +32,13 @@ description: Convert and display images for Waveshare 7.3inch e-Paper E by calli
 
 ```bash
 # 生成驱动可直接消费的 packed 紧凑编码文件，推荐使用 cover 策略铺满屏幕
-./scripts/epaper_converter convert input.jpg output.packed -f packed --halftone atkinson --resize-mode cover
+./scripts/epaper_converter convert input.jpg output.packed -f packed --dither atkinson --resize-mode cover
 
 # 如果想要预览转换后的呈现效果，可以额外输出 bmp
-./scripts/epaper_converter convert input.jpg preview.bmp -f bmp --halftone bayer --resize-mode contain
+./scripts/epaper_converter convert input.jpg preview.bmp -f bmp --dither bayer --resize-mode contain
 
 # 如果夜景想保留更多暗部氛围，可选传入 gamma 做轻微压暗
-./scripts/epaper_converter convert input.jpg night.png -f png --halftone atkinson --resize-mode cover --gamma 1.15
+./scripts/epaper_converter convert input.jpg night.png -f png --dither atkinson --resize-mode cover --gamma 1.15
 ```
 
 > **提示**：你可以通过检查命令验证某张图片是否已满足严格的墨水屏规格要求：
@@ -61,10 +61,10 @@ description: Convert and display images for Waveshare 7.3inch e-Paper E by calli
 ./scripts/show_on_screen.py output.packed
 
 # 快捷方式：由脚本代劳转换并铺满刷屏
-./scripts/show_on_screen.py photo.jpg --halftone atkinson --resize-mode cover
+./scripts/show_on_screen.py photo.jpg --dither atkinson --resize-mode cover
 
 # 如需恢复“先清屏再显示”的旧行为，可手动开启
-./scripts/show_on_screen.py photo.jpg --halftone atkinson --resize-mode cover --clear
+./scripts/show_on_screen.py photo.jpg --dither atkinson --resize-mode cover --clear
 ```
 
 ## `convert` 命令参数一览
@@ -73,7 +73,7 @@ description: Convert and display images for Waveshare 7.3inch e-Paper E by calli
 
 - `-w, --width`：目标宽度，默认 `800`
 - `-H, --height`：目标高度，默认 `480`
-- `-m, --halftone`：半色调算法。
+- `-d, --dither`：抖动算法。
   - `bayer`：规则阈值矩阵抖动，默认方案，干净稳定。
   - `blue-noise`：蓝噪声阈值纹理，更适合渐变和细腻哑光质感。
   - `yliluoma`：调色板感知的有序抖动，适合更柔和的颜色过渡。

@@ -73,7 +73,7 @@ def convert_image(input_path: str, output_path: str, width: int = 800, height: i
         "-f", infer_format(output_path),
     ]
 
-    cmd.extend(["--halftone", halftone, "--gamma", str(gamma)])
+    cmd.extend(["--dither", halftone, "--gamma", str(gamma)])
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -140,8 +140,8 @@ def main():
         help='Target height (default: 480)'
     )
     parser.add_argument(
-        '--halftone', choices=['bayer', 'blue-noise', 'yliluoma', 'atkinson'], default='bayer',
-        help='Halftone algorithm (default: bayer)'
+        '--dither', choices=['bayer', 'blue-noise', 'yliluoma', 'atkinson'], default='bayer',
+        help='Dither algorithm (default: bayer)'
     )
     parser.add_argument(
         '--gamma', type=float, default=1.0,
@@ -164,7 +164,7 @@ def main():
 
     print(f"Converting {args.input}...")
     print(f"Target size: {args.width}x{args.height}")
-    print(f"Halftone: {args.halftone}")
+    print(f"Dither: {args.dither}")
     print(f"Gamma: {args.gamma}")
     print(f"Engine: Rust (high-performance)")
 
@@ -183,7 +183,7 @@ def main():
             "-f", args.format or infer_format(args.output),
         ]
 
-        cmd.extend(["--halftone", args.halftone, "--gamma", str(args.gamma)])
+        cmd.extend(["--dither", args.dither, "--gamma", str(args.gamma)])
 
         result = subprocess.run(cmd)
 

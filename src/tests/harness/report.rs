@@ -1,8 +1,8 @@
 use std::fmt::Write;
 
 use super::{
-    compare_rendered_fixture, fastest_candidate, halftone_mode_slug, overall_best_candidate,
-    ModeAggregateSummary, RankedCandidate, RenderedFixture, FIXTURE_NAMES, HARNESS_HALFTONE_CASES,
+    compare_rendered_fixture, dither_mode_slug, fastest_candidate, overall_best_candidate,
+    ModeAggregateSummary, RankedCandidate, RenderedFixture, FIXTURE_NAMES, HARNESS_DITHER_CASES,
 };
 
 pub(crate) fn format_suite_report(rendered: &[RenderedFixture]) -> String {
@@ -14,8 +14,8 @@ pub(crate) fn format_suite_report(rendered: &[RenderedFixture]) -> String {
     );
 
     for case in rendered {
-        let requested = halftone_mode_slug(case.requested_mode);
-        let resolved = halftone_mode_slug(case.resolved_mode);
+        let requested = dither_mode_slug(case.requested_mode);
+        let resolved = dither_mode_slug(case.resolved_mode);
         let _ = writeln!(
             report,
             "{:<16} {:<6} {:<12} {:<12} {:>8.2} pp     {:<6} {:>6.2} pp {:>8} {:>8}",
@@ -59,8 +59,8 @@ pub(crate) fn format_leaderboard(rendered: &[RenderedFixture]) -> String {
     );
 
     for candidate in leaders {
-        let requested = halftone_mode_slug(candidate.requested_mode);
-        let resolved = halftone_mode_slug(candidate.resolved_mode);
+        let requested = dither_mode_slug(candidate.requested_mode);
+        let resolved = dither_mode_slug(candidate.resolved_mode);
         let _ = writeln!(
             report,
             "{:<16} {:<6} {:<12} {:<12} {:>8.2} pp     {:<6} {:>6.2} pp",
@@ -78,7 +78,7 @@ pub(crate) fn format_leaderboard(rendered: &[RenderedFixture]) -> String {
 }
 
 pub(crate) fn summarize_modes(rendered: &[RenderedFixture]) -> Vec<ModeAggregateSummary> {
-    HARNESS_HALFTONE_CASES
+    HARNESS_DITHER_CASES
         .iter()
         .filter_map(|(mode, _)| {
             let cases = rendered
@@ -124,7 +124,7 @@ pub(crate) fn format_mode_summary(rendered: &[RenderedFixture]) -> String {
         let _ = writeln!(
             report,
             "{:<12} {:>8.2} pp           {:>8.2} pp       {:>8.2} {:>9}",
-            halftone_mode_slug(summary.requested_mode),
+            dither_mode_slug(summary.requested_mode),
             summary.avg_total_abs_delta,
             summary.avg_max_abs_delta,
             summary.avg_elapsed_ms,
@@ -145,7 +145,7 @@ pub(crate) fn format_recommendations(rendered: &[RenderedFixture]) -> String {
             best.fixture_name,
             best.gamma_slug,
             best.gamma,
-            halftone_mode_slug(best.requested_mode),
+            dither_mode_slug(best.requested_mode),
             best.palette_report.total_abs_delta,
             best.palette_report.max_abs_delta,
             best.elapsed_ms,
@@ -159,7 +159,7 @@ pub(crate) fn format_recommendations(rendered: &[RenderedFixture]) -> String {
             fastest.fixture_name,
             fastest.gamma_slug,
             fastest.gamma,
-            halftone_mode_slug(fastest.requested_mode),
+            dither_mode_slug(fastest.requested_mode),
             fastest.elapsed_ms,
             fastest.palette_report.total_abs_delta,
         );

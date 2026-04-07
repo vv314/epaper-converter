@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;
 
 use super::{
-    halftone_mode_slug, BaselineEntry, RegressionComparison, RegressionStatus, RenderedFixture,
+    dither_mode_slug, BaselineEntry, RegressionComparison, RegressionStatus, RenderedFixture,
 };
 
 pub(crate) fn build_baseline_snapshot(rendered: &[RenderedFixture]) -> String {
@@ -14,7 +14,7 @@ pub(crate) fn build_baseline_snapshot(rendered: &[RenderedFixture]) -> String {
                 "{}\t{}\t{}\t{:.4}\t{:.4}\t{}",
                 case.fixture_name,
                 case.gamma_slug,
-                halftone_mode_slug(case.requested_mode),
+                dither_mode_slug(case.requested_mode),
                 case.palette_report.total_abs_delta,
                 case.palette_report.max_abs_delta,
                 case.palette_report.rendered_invalid_pixels,
@@ -46,12 +46,12 @@ pub(crate) fn compare_against_baseline(
                 baseline_key(
                     case.fixture_name,
                     case.gamma_slug,
-                    halftone_mode_slug(case.requested_mode),
+                    dither_mode_slug(case.requested_mode),
                 ),
                 BaselineEntry {
                     fixture_name: case.fixture_name.to_string(),
                     gamma_slug: case.gamma_slug.to_string(),
-                    requested_mode: halftone_mode_slug(case.requested_mode).to_string(),
+                    requested_mode: dither_mode_slug(case.requested_mode).to_string(),
                     total_abs_delta: case.palette_report.total_abs_delta,
                     max_abs_delta: case.palette_report.max_abs_delta,
                     rendered_invalid_pixels: case.palette_report.rendered_invalid_pixels,
