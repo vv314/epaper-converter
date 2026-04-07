@@ -61,21 +61,35 @@ scp target/aarch64-unknown-linux-musl/release/epaper_converter pi@<ip>:/usr/loca
 epaper_converter convert input.jpg output.bin -f bin --dither atkinson
 ```
 
-**核心参数**：
+**参数表**：
 
-- `-w, --width` / `-H, --height`：目标分辨率（默认 `800x480`）。
-- `-d, --dither`：抖动模式（默认 `bayer`）。
-  - `bayer`：规则阈值矩阵抖动，画面更干净、速度更快。**适合大多数墨水屏预览与常规照片**。
-  - `blue-noise`：蓝噪声阈值纹理，颗粒更细腻、规律感更弱。**适合渐变和大面积平滑过渡**。
-  - `yliluoma`：调色板感知的有序抖动，颜色混合更柔和。**适合需要兼顾层次与配色过渡的图像**。
-  - `atkinson`：更克制的误差扩散，层次更锐利。**适合细节复杂、局部反差高的图像**。
-  - `burkes`：更完整的误差扩散，保留更多中间层次。**适合希望在细节和色块稳定性之间取平衡的图像**。
-- `--resize-mode`：缩放策略（`contain`, `cover`, `stretch`，默认 `contain`）。
-- `--gamma`：可选 Gamma 校正参数，默认 `1.0`；`< 1.0` 提亮中间调，`> 1.0` 压暗中间调。
-  - 建议从 `1.0` 起步：夜景、深色背景可尝试 `1.10 ~ 1.20`；高亮、浅底、叶片占比高的图片通常保持 `1.0` 更稳。
-  - 不建议大幅偏离 `1.0`；若超过 `0.85 ~ 1.20`，容易导致高光发白或暗部堵塞。
-- `-f, --format`：输出格式（`bmp`, `bin`, `packed`, `png`, `both`）。
-- `-b, --benchmark`：打印处理耗时。
+| 参数 | 说明 | 默认值 |
+| ---- | ---- | ------ |
+| `input` | 输入图片路径。 | - |
+| `output` | 输出文件路径。 | - |
+| `-w, --width` | 目标宽度。 | `800` |
+| `-H, --height` | 目标高度。 | `480` |
+| `-d, --dither` | 抖动模式，可选 `bayer`、`blue-noise`、`yliluoma`、`atkinson`、`burkes`。 | `bayer` |
+| `--resize-mode` | 缩放策略，可选 `contain`、`cover`、`stretch`。 | `contain` |
+| `--auto-rotate` | 是否在缩放前应用 EXIF 自动旋转。 | `true` |
+| `--gamma` | Gamma 校正参数；`< 1.0` 提亮中间调，`> 1.0` 压暗中间调。 | `1.0` |
+| `-f, --format` | 输出格式，可选 `bmp`、`bin`、`packed`、`png`、`both`。 | `bmp` |
+| `-b, --benchmark` | 打印处理耗时。 | `false` |
+
+**抖动模式说明**：
+
+| 模式 | 特点 | 适用场景 |
+| ---- | ---- | -------- |
+| `bayer` | 规则阈值矩阵抖动，画面更干净、速度更快。 | 大多数墨水屏预览与常规照片 |
+| `blue-noise` | 蓝噪声阈值纹理，颗粒更细腻、规律感更弱。 | 渐变和大面积平滑过渡 |
+| `yliluoma` | 调色板感知的有序抖动，颜色混合更柔和。 | 需要兼顾层次与配色过渡的图像 |
+| `atkinson` | 更克制的误差扩散，层次更锐利。 | 细节复杂、局部反差高的图像 |
+| `burkes` | 更完整的误差扩散，保留更多中间层次。 | 希望在细节和色块稳定性之间取平衡的图像 |
+
+**Gamma 使用建议**：
+
+- 建议从 `1.0` 起步：夜景、深色背景可尝试 `1.10 ~ 1.20`；高亮、浅底、叶片占比高的图片通常保持 `1.0` 更稳。
+- 不建议大幅偏离 `1.0`；若超过 `0.85 ~ 1.20`，容易导致高光发白或暗部堵塞。
 
 **常见场景**：
 
@@ -104,6 +118,14 @@ epaper_converter convert input.jpg output.bin -f bin --dither atkinson
 epaper_converter check preview.bmp --verbose
 ```
 
+**参数表**：
+
+| 参数 | 说明 | 默认值 |
+| ---- | ---- | ------ |
+| `input` | 待检查的图片路径。 | - |
+| `-v, --verbose` | 输出详细信息。 | `false` |
+| `-q, --quiet` | 静默模式，仅通过退出码表示结果。 | `false` |
+
 **退出码**：
 
 - `0`: 验证通过。
@@ -117,6 +139,14 @@ epaper_converter check preview.bmp --verbose
 ```bash
 epaper_converter benchmark photo.jpg
 ```
+
+**参数表**：
+
+| 参数 | 说明 | 默认值 |
+| ---- | ---- | ------ |
+| `input` | 用于基准测试的输入图片路径。 | - |
+| `-w, --width` | 基准测试时使用的目标宽度。 | `800` |
+| `-H, --height` | 基准测试时使用的目标高度。 | `480` |
 
 ## 产物说明
 
