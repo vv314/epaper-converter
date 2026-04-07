@@ -10,16 +10,19 @@ pub(crate) const DEFAULT_GAMMA: f32 = 1.0;
 pub(crate) const FIXTURE_NAMES: [&str; 3] = ["gradient", "starry_night", "tree"];
 pub(crate) const GAMMA_CASES: [(f32, &str); 3] = [(0.85, "g085"), (1.0, "g100"), (1.15, "g115")];
 #[allow(dead_code)]
-pub(crate) const HALFTONE_CASES: [(HalftoneMode, &str); 4] = [
+pub(crate) const HALFTONE_CASES: [(HalftoneMode, &str); 5] = [
     (HalftoneMode::Bayer, "bayer"),
     (HalftoneMode::BlueNoise, "blue-noise"),
     (HalftoneMode::Atkinson, "atkinson"),
+    (HalftoneMode::Burkes, "burkes"),
     (HalftoneMode::Yliluoma, "yliluoma"),
 ];
-pub(crate) const HARNESS_HALFTONE_CASES: [(HalftoneMode, &str); 3] = [
+pub(crate) const HARNESS_HALFTONE_CASES: [(HalftoneMode, &str); 5] = [
     (HalftoneMode::Bayer, "bayer"),
     (HalftoneMode::BlueNoise, "blue-noise"),
     (HalftoneMode::Atkinson, "atkinson"),
+    (HalftoneMode::Burkes, "burkes"),
+    (HalftoneMode::Yliluoma, "yliluoma"),
 ];
 
 pub(crate) struct TempImageFile {

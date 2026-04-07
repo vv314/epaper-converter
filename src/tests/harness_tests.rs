@@ -86,7 +86,13 @@ fn harness_formats_fixture_leaderboard() -> anyhow::Result<()> {
             1.15,
             "g115",
         )?,
-        harness::render_fixture_to_output("tree", HalftoneMode::BlueNoise, "blue_rank", 0.85, "g085")?,
+        harness::render_fixture_to_output(
+            "tree",
+            HalftoneMode::BlueNoise,
+            "blue_rank",
+            0.85,
+            "g085",
+        )?,
     ];
     let output_paths = rendered
         .iter()
@@ -121,7 +127,13 @@ fn harness_formats_mode_summary_and_recommendations() -> anyhow::Result<()> {
             0.85,
             "g085",
         )?,
-        harness::render_fixture_to_output("tree", HalftoneMode::Atkinson, "atkinson_perf", 1.15, "g115")?,
+        harness::render_fixture_to_output(
+            "tree",
+            HalftoneMode::Atkinson,
+            "atkinson_perf",
+            1.15,
+            "g115",
+        )?,
     ];
     let output_paths = rendered
         .iter()
@@ -152,7 +164,13 @@ fn harness_builds_and_compares_baseline_snapshot() -> anyhow::Result<()> {
             1.0,
             "g100",
         )?,
-        harness::render_fixture_to_output("tree", HalftoneMode::BlueNoise, "blue_base", 0.85, "g085")?,
+        harness::render_fixture_to_output(
+            "tree",
+            HalftoneMode::BlueNoise,
+            "blue_base",
+            0.85,
+            "g085",
+        )?,
     ];
     let output_paths = rendered
         .iter()

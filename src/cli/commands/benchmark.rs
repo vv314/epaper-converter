@@ -4,7 +4,9 @@ use std::time::Instant;
 
 use crate::cli::args::{BenchmarkArgs, ResizeMode};
 use crate::pipeline::{indices_to_rgb_image, resize_with_mode};
-use crate::quantize::{quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_yliluoma};
+use crate::quantize::{
+    quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_burkes, quantize_yliluoma,
+};
 
 pub(in crate::cli) fn run(args: BenchmarkArgs) -> Result<()> {
     let BenchmarkArgs {
@@ -35,6 +37,10 @@ pub(in crate::cli) fn run(args: BenchmarkArgs) -> Result<()> {
     let atkinson_time = start.elapsed();
 
     let start = Instant::now();
+    black_box(quantize_burkes(&rgb_img, width, height));
+    let burkes_time = start.elapsed();
+
+    let start = Instant::now();
     let _rgb_out = indices_to_rgb_image(&indices_bayer, width, height);
     let convert_time = start.elapsed();
 
@@ -56,6 +62,10 @@ pub(in crate::cli) fn run(args: BenchmarkArgs) -> Result<()> {
         atkinson_time.as_secs_f64() * 1000.0
     );
     println!(
+        "Burkes mode:  {:>8.2}ms",
+        burkes_time.as_secs_f64() * 1000.0
+    );
+    println!(
         "RGB convert:   {:>8.2}ms",
         convert_time.as_secs_f64() * 1000.0
     );
@@ -74,6 +84,10 @@ pub(in crate::cli) fn run(args: BenchmarkArgs) -> Result<()> {
     println!(
         "Total Atkinson:{:>8.2}ms",
         (atkinson_time + convert_time).as_secs_f64() * 1000.0
+    );
+    println!(
+        "Total Burkes: {:>8.2}ms",
+        (burkes_time + convert_time).as_secs_f64() * 1000.0
     );
 
     Ok(())

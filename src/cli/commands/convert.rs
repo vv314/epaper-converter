@@ -4,7 +4,9 @@ use std::time::Instant;
 
 use crate::cli::args::{ConvertArgs, HalftoneMode, OutputFormat};
 use crate::pipeline::{indices_to_rgb_image, prepare_image, save_bin_buffer, save_packed_buffer};
-use crate::quantize::{quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_yliluoma};
+use crate::quantize::{
+    quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_burkes, quantize_yliluoma,
+};
 
 use super::halftone_mode_label;
 
@@ -56,6 +58,7 @@ pub(in crate::cli) fn run(args: ConvertArgs) -> Result<()> {
         HalftoneMode::BlueNoise => quantize_blue_noise(&rgb_img, width, height),
         HalftoneMode::Yliluoma => quantize_yliluoma(&rgb_img, width, height),
         HalftoneMode::Atkinson => quantize_atkinson(&rgb_img, width, height),
+        HalftoneMode::Burkes => quantize_burkes(&rgb_img, width, height),
     };
 
     let convert_time = convert_start.elapsed();

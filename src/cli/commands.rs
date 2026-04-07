@@ -17,6 +17,7 @@ pub(super) fn halftone_mode_label(mode: HalftoneMode) -> &'static str {
         HalftoneMode::BlueNoise => "Blue noise dithering",
         HalftoneMode::Yliluoma => "Yliluoma ordered dithering",
         HalftoneMode::Atkinson => "Atkinson dithering",
+        HalftoneMode::Burkes => "Burkes dithering",
     }
 }
 

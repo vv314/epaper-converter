@@ -115,6 +115,8 @@ pub enum HalftoneMode {
     Yliluoma,
     /// Atkinson dithering - sharper diffusion with less gray haze than Floyd
     Atkinson,
+    /// Burkes dithering - richer diffusion that keeps more tonal detail on six-color panels
+    Burkes,
 }
 
 #[derive(Default, Clone, Copy, Debug, ValueEnum, PartialEq, Eq)]

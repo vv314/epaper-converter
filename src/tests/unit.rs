@@ -1,11 +1,12 @@
 use super::harness::TempImageFile;
 use crate::cli::ResizeMode;
 use crate::pipeline::{
-    apply_gamma_to_rgb_image, check_epaper_format, indices_to_packed_buffer, palette_histogram_exact,
-    palette_histogram_nearest, resize_with_mode,
+    apply_gamma_to_rgb_image, check_epaper_format, indices_to_packed_buffer,
+    palette_histogram_exact, palette_histogram_nearest, resize_with_mode,
 };
 use crate::quantize::{
-    quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_yliluoma, PALETTE,
+    quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_burkes, quantize_yliluoma,
+    PALETTE,
 };
 use image::{DynamicImage, ImageBuffer, Rgb};
 
@@ -84,6 +85,51 @@ fn atkinson_quantizer_preserves_dimensions_and_palette_range() {
 
     assert_eq!(indices.len(), 16 * 16);
     assert!(indices.iter().all(|&idx| idx < PALETTE.len() as u8));
+}
+
+#[test]
+fn atkinson_quantizer_is_deterministic_with_serpentine_scan() {
+    let img = ImageBuffer::from_fn(17, 11, |x, y| {
+        Rgb([
+            ((x * 9 + y * 5) % 256) as u8,
+            ((x * 7 + y * 13) % 256) as u8,
+            ((x * 3 + y * 17) % 256) as u8,
+        ])
+    });
+    let first = quantize_atkinson(&img, 17, 11);
+    let second = quantize_atkinson(&img, 17, 11);
+
+    assert_eq!(first, second);
+}
+
+#[test]
+fn burkes_quantizer_preserves_dimensions_and_palette_range() {
+    let img = ImageBuffer::from_fn(16, 16, |x, y| {
+        Rgb([
+            (x * 15) as u8,
+            (255 - y * 9) as u8,
+            ((x * 7 + y * 13) % 256) as u8,
+        ])
+    });
+    let indices = quantize_burkes(&img, 16, 16);
+
+    assert_eq!(indices.len(), 16 * 16);
+    assert!(indices.iter().all(|&idx| idx < PALETTE.len() as u8));
+}
+
+#[test]
+fn burkes_quantizer_is_deterministic_with_serpentine_scan() {
+    let img = ImageBuffer::from_fn(17, 11, |x, y| {
+        Rgb([
+            ((x * 5 + y * 11) % 256) as u8,
+            ((x * 13 + y * 7) % 256) as u8,
+            ((x * 19 + y * 3) % 256) as u8,
+        ])
+    });
+    let first = quantize_burkes(&img, 17, 11);
+    let second = quantize_burkes(&img, 17, 11);
+
+    assert_eq!(first, second);
 }
 
 #[test]

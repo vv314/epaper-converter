@@ -29,7 +29,7 @@
 ## 功能概览
 
 - 使用 `Lanczos3` 进行高质量缩放。
-- 支持四种显式半色调模式：`bayer`、`blue-noise`、`yliluoma`、`atkinson`。
+- 支持五种显式半色调模式：`bayer`、`blue-noise`、`yliluoma`、`atkinson`、`burkes`。
 - 支持三种缩放策略：`contain`（等比留白）、`cover`（中心裁剪铺满）、`stretch`（强制拉伸）。
 - 默认读取 EXIF 信息校正图像方向。
 - **输入支持**：`JPEG`, `PNG`, `BMP`。
@@ -69,6 +69,7 @@ epaper_converter convert input.jpg output.bin -f bin --halftone atkinson
   - `blue-noise`：蓝噪声阈值纹理，颗粒更细腻、规律感更弱。**适合渐变和大面积平滑过渡**。
   - `yliluoma`：调色板感知的有序抖动，颜色混合更柔和。**适合需要兼顾层次与配色过渡的图像**。
   - `atkinson`：更克制的误差扩散，层次更锐利。**适合细节复杂、局部反差高的图像**。
+  - `burkes`：更完整的误差扩散，保留更多中间层次。**适合希望在细节和色块稳定性之间取平衡的图像**。
 - `--resize-mode`：缩放策略（`contain`, `cover`, `stretch`，默认 `contain`）。
 - `--gamma`：可选 Gamma 校正参数，默认 `1.0`；`< 1.0` 提亮中间调，`> 1.0` 压暗中间调。
   - 建议从 `1.0` 起步：夜景、深色背景可尝试 `1.10 ~ 1.20`；高亮、浅底、叶片占比高的图片通常保持 `1.0` 更稳。
@@ -111,7 +112,7 @@ epaper_converter check preview.bmp --verbose
 
 ### 性能基准测试 (`benchmark`)
 
-评估当前设备上的转换耗时（包括 `bayer` / `atkinson` 模式及反向 RGB 生成）。
+评估当前设备上的转换耗时（包括 `bayer` / `blue-noise` / `yliluoma` / `atkinson` / `burkes` 模式及反向 RGB 生成）。
 
 ```bash
 epaper_converter benchmark photo.jpg
