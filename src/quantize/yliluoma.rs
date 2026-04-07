@@ -136,7 +136,8 @@ fn push_precomputed_mix(
         max_luma = max_luma.max(luma);
 
         for channel in 0..3 {
-            mixed_gamma[channel] += palette_gamma[palette_idx as usize][channel] * count as f32 * inv_total;
+            mixed_gamma[channel] +=
+                palette_gamma[palette_idx as usize][channel] * count as f32 * inv_total;
         }
 
         for _ in 0..count {

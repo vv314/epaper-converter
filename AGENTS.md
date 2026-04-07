@@ -31,41 +31,6 @@
 
 ## 算法调优
 
-### 生成规则
-
-- 当发生算法改动时，需将测试图片继续输出到项目根目录下的 `output/` 目录，便于与历史结果做并排比较。
-- 缩放/裁剪模式仍固定使用 `cover`。
-- 使用 `cargo run` 运行，输出格式固定为 `png`。
-- 此场景下文件命名格式调整为 `{原名}.cover.{算法}_{算法迭代标识}.png`。
-- `算法迭代标识` 可以使用版本号，如 `v1`、`v2`；也可以使用语义化标识，如 `rgb`、`lab`。
-
-### 命名示例
-
-- `gradient.cover.fast_v1.png`
-- `gradient.cover.floyd_v2.png`
-- `gradient.cover.auto_rgb.png`
-- `gradient.cover.auto_lab.png`
-
-### 算法迭代标识规范
-
-- 优先使用可读、稳定的标识，避免临时缩写和无语义命名。
-- 版本型标识使用 `v1`、`v2`、`v3` 这类形式，适合表示同一路线下的连续调优。
-- 语义型标识使用 `rgb`、`lab`、`fastpath` 这类形式，适合表示不同算法分支或颜色空间方案。
-- 同一轮对比中应保持标识风格一致，不要混用 `v2`、`new`、`final` 这类难以横向比较的命名。
-
-### 验证流程
-
-- 当修改算法、量化、抖动、颜色映射或缩放策略时，需使用 `tests/fixtures/` 中的样例图重新生成 `output/` 对比产物。
-- 默认生成规则保持为 `cover + png`，便于不同迭代结果做横向比较。
-- 除肉眼比对外，需优先使用 `cargo run -- palette-report <原图> <生成图> --resize-mode cover` 做调色板占比分析；该命令会先将原图按同样的预处理流程投影到 6 色调色板，再与生成图的实际调色板占比逐色对比。
-- 调色板占比分析重点关注 `Total abs delta` 与 `Max color delta`：两者越小，说明生成图在颜色占比上越接近原图投影；若单色偏差异常放大，通常意味着该色被过度压缩或过度扩张。
-- 若涉及算法逻辑改动，提交前至少运行一次 `cargo test`。
-- 需要人工确认时，优先对比同一原图在不同算法或不同迭代标识下的输出结果。
-
-### Harness 约定
-
-- `src/tests/harness.rs` 视为算法调优的测试控制台：负责批量出图、参数扫描、排行榜、性能采样与 baseline regression 对比。
-- 默认 harness 目标是提升 agent 反馈效率，而不是穷举所有慢路径；新增重型算法或高成本参数扫描时，应优先设计为 `#[ignore]` 测试或单独入口。
-- 当需要批量比较 `gamma`、`halftone` 或自动策略时，优先复用现有 harness 报告能力，而不是手写临时脚本。
-- 当一次实验要作为后续回归基线时，应优先产出 baseline snapshot，并基于 snapshot 做 `improved` / `regressed` / `unchanged` 判断。
-- 若某项 harness 结果会被 agent 用于决策，报告中至少应包含：输入夹具、模式、关键质量指标、耗时，以及必要的推荐结论。
+- 详细规范参考 `docs/algorithm-tuning.md`。
+- 当任务涉及算法、量化、抖动、颜色映射、缩放策略、gamma 或 harness 调优时，优先先读 `docs/algorithm-tuning.md` 再执行。
+- 日常最小约定保持不变：输入夹具使用 `tests/fixtures/`，调优产物输出到 `output/`，缩放模式固定为 `cover`，优先配合 `palette-report` 做占比分析。

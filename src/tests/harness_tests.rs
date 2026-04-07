@@ -1,4 +1,6 @@
-use super::harness::{self, FIXTURE_NAMES, GAMMA_CASES, HARNESS_HALFTONE_CASES, TARGET_HEIGHT, TARGET_WIDTH};
+use super::harness::{
+    self, FIXTURE_NAMES, GAMMA_CASES, HARNESS_HALFTONE_CASES, TARGET_HEIGHT, TARGET_WIDTH,
+};
 use crate::cli::HalftoneMode;
 
 #[test]

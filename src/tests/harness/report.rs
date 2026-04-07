@@ -172,7 +172,12 @@ pub(crate) fn format_recommendations(rendered: &[RenderedFixture]) -> String {
         .iter()
         .filter(|candidate| candidate.requested_mode == HalftoneMode::Auto)
         .count();
-    let _ = writeln!(report, "Auto wins: {}/{} fixtures", auto_wins, leaders.len(),);
+    let _ = writeln!(
+        report,
+        "Auto wins: {}/{} fixtures",
+        auto_wins,
+        leaders.len(),
+    );
 
     report
 }

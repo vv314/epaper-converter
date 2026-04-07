@@ -23,8 +23,9 @@ pub(crate) fn build_baseline_snapshot(rendered: &[RenderedFixture]) -> String {
         .collect::<Vec<_>>();
     entries.sort();
 
-    let mut snapshot =
-        String::from("fixture\tgamma\tmode\ttotal_abs_delta\tmax_abs_delta\trendered_invalid_pixels\n");
+    let mut snapshot = String::from(
+        "fixture\tgamma\tmode\ttotal_abs_delta\tmax_abs_delta\trendered_invalid_pixels\n",
+    );
     for entry in entries {
         snapshot.push_str(&entry);
         snapshot.push('\n');
@@ -175,7 +176,9 @@ fn parse_baseline_snapshot(snapshot: &str) -> Result<BTreeMap<String, BaselineEn
             requested_mode: parts[2].to_string(),
             total_abs_delta: parts[3].parse().context("Invalid total_abs_delta")?,
             max_abs_delta: parts[4].parse().context("Invalid max_abs_delta")?,
-            rendered_invalid_pixels: parts[5].parse().context("Invalid rendered_invalid_pixels")?,
+            rendered_invalid_pixels: parts[5]
+                .parse()
+                .context("Invalid rendered_invalid_pixels")?,
         };
         let key = baseline_key(
             &entry.fixture_name,

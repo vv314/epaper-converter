@@ -14,12 +14,12 @@ use crate::pipeline::{indices_to_rgb_image, palette_histogram_exact, palette_his
 use crate::quantize::{quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_yliluoma};
 
 pub(super) use config::{
-    DEFAULT_GAMMA, FIXTURE_NAMES, GAMMA_CASES, HARNESS_HALFTONE_CASES, TARGET_HEIGHT,
-    TARGET_WIDTH, TempImageFile,
+    TempImageFile, DEFAULT_GAMMA, FIXTURE_NAMES, GAMMA_CASES, HARNESS_HALFTONE_CASES,
+    TARGET_HEIGHT, TARGET_WIDTH,
 };
 pub(super) use model::{
-    BaselineEntry, ModeAggregateSummary, PaletteReportSummary, RankedCandidate, RegressionComparison,
-    RegressionStatus, RenderRequest, RenderedFixture,
+    BaselineEntry, ModeAggregateSummary, PaletteReportSummary, RankedCandidate,
+    RegressionComparison, RegressionStatus, RenderRequest, RenderedFixture,
 };
 pub(super) use regression::{
     build_baseline_snapshot, compare_against_baseline, format_regression_report,

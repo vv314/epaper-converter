@@ -18,7 +18,7 @@ pub(super) enum Commands {
     Check(CheckArgs),
     /// Benchmark the converter with a test image
     Benchmark(BenchmarkArgs),
-    /// Compare source and converted palette occupancy ratios
+    /// Compare source projection and output palette occupancy ratios for engineering analysis
     PaletteReport(PaletteReportArgs),
 }
 
@@ -80,9 +80,9 @@ pub(super) struct BenchmarkArgs {
 
 #[derive(Args)]
 pub(super) struct PaletteReportArgs {
-    /// Source image path
+    /// Source image path used to build the palette projection baseline
     pub(super) source: String,
-    /// Converted image path
+    /// Rendered image path to validate and compare against the source projection
     pub(super) rendered: String,
     /// Target width used before conversion
     #[arg(short, long, default_value = "800")]
@@ -96,6 +96,12 @@ pub(super) struct PaletteReportArgs {
     /// Apply EXIF orientation before resizing source image
     #[arg(long, default_value_t = true, action = ArgAction::Set)]
     pub(super) auto_rotate: bool,
+    /// Apply the same gamma used during conversion before projecting source colors
+    #[arg(long, default_value = "1.0")]
+    pub(super) gamma: f32,
+    /// Allow non-palette rendered pixels and compare via nearest-palette projection instead of failing
+    #[arg(long)]
+    pub(super) allow_non_palette: bool,
 }
 
 #[derive(Default, Clone, Copy, Debug, ValueEnum, PartialEq, Eq)]
