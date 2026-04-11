@@ -5,7 +5,8 @@ use std::time::Instant;
 use crate::cli::args::{ConvertArgs, DitherMode, OutputFormat};
 use crate::pipeline::{indices_to_rgb_image, prepare_image, save_bin_buffer, save_packed_buffer};
 use crate::quantize::{
-    quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_burkes, quantize_yliluoma,
+    quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_clustered_dot,
+    quantize_floyd_steinberg, quantize_yliluoma,
 };
 
 use super::dither_mode_label;
@@ -58,7 +59,8 @@ pub(in crate::cli) fn run(args: ConvertArgs) -> Result<()> {
         DitherMode::BlueNoise => quantize_blue_noise(&rgb_img, width, height),
         DitherMode::Yliluoma => quantize_yliluoma(&rgb_img, width, height),
         DitherMode::Atkinson => quantize_atkinson(&rgb_img, width, height),
-        DitherMode::Burkes => quantize_burkes(&rgb_img, width, height),
+        DitherMode::FloydSteinberg => quantize_floyd_steinberg(&rgb_img, width, height),
+        DitherMode::ClusteredDot => quantize_clustered_dot(&rgb_img, width, height),
     };
 
     let convert_time = convert_start.elapsed();

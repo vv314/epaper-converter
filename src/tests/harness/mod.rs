@@ -12,7 +12,8 @@ use std::path::PathBuf;
 use crate::cli::DitherMode;
 use crate::pipeline::{indices_to_rgb_image, palette_histogram_exact, palette_histogram_nearest};
 use crate::quantize::{
-    quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_burkes, quantize_yliluoma,
+    quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_clustered_dot,
+    quantize_floyd_steinberg, quantize_yliluoma,
 };
 
 pub(super) use config::{
@@ -56,7 +57,8 @@ fn quantize_image(img: &RgbImage, mode: DitherMode) -> Vec<u8> {
         DitherMode::BlueNoise => quantize_blue_noise(img, TARGET_WIDTH, TARGET_HEIGHT),
         DitherMode::Yliluoma => quantize_yliluoma(img, TARGET_WIDTH, TARGET_HEIGHT),
         DitherMode::Atkinson => quantize_atkinson(img, TARGET_WIDTH, TARGET_HEIGHT),
-        DitherMode::Burkes => quantize_burkes(img, TARGET_WIDTH, TARGET_HEIGHT),
+        DitherMode::FloydSteinberg => quantize_floyd_steinberg(img, TARGET_WIDTH, TARGET_HEIGHT),
+        DitherMode::ClusteredDot => quantize_clustered_dot(img, TARGET_WIDTH, TARGET_HEIGHT),
     }
 }
 
@@ -146,7 +148,8 @@ fn dither_mode_slug(mode: DitherMode) -> &'static str {
         DitherMode::BlueNoise => "blue-noise",
         DitherMode::Yliluoma => "yliluoma",
         DitherMode::Atkinson => "atkinson",
-        DitherMode::Burkes => "burkes",
+        DitherMode::FloydSteinberg => "floyd-steinberg",
+        DitherMode::ClusteredDot => "clustered-dot",
     }
 }
 

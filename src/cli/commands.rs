@@ -17,7 +17,8 @@ pub(super) fn dither_mode_label(mode: DitherMode) -> &'static str {
         DitherMode::BlueNoise => "Blue noise dithering",
         DitherMode::Yliluoma => "Yliluoma ordered dithering",
         DitherMode::Atkinson => "Atkinson dithering",
-        DitherMode::Burkes => "Burkes dithering",
+        DitherMode::FloydSteinberg => "Floyd-Steinberg baseline",
+        DitherMode::ClusteredDot => "Clustered-dot ordered dithering",
     }
 }
 

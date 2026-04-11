@@ -13,7 +13,7 @@
 - 缩放/裁剪模式固定使用 `cover`。
 - 为了能让 LLM 读取图片内容，输出格式固定为 `png`。
 - 文件命名格式优先使用 `{原名}.cover.{算法}_{算法迭代标识}.png`；未设置迭代标识时，可回落为 `{原名}.cover.{算法}.png`。
-- 若通过测试 harness 批量生成产物，默认跑 `bayer`、`blue-noise`、`atkinson`、`burkes`、`yliluoma`，用于自动化批量对比。
+- 若通过测试 harness 批量生成产物，默认跑 `bayer`、`blue-noise`、`atkinson`、`floyd-steinberg`、`clustered-dot`、`yliluoma`，用于自动化批量对比。
 
 ### 命名示例
 

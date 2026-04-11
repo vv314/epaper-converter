@@ -5,7 +5,8 @@ use std::time::Instant;
 use crate::cli::args::{BenchmarkArgs, ResizeMode};
 use crate::pipeline::{indices_to_rgb_image, resize_with_mode};
 use crate::quantize::{
-    quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_burkes, quantize_yliluoma,
+    quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_clustered_dot,
+    quantize_floyd_steinberg, quantize_yliluoma,
 };
 
 pub(in crate::cli) fn run(args: BenchmarkArgs) -> Result<()> {
@@ -37,8 +38,12 @@ pub(in crate::cli) fn run(args: BenchmarkArgs) -> Result<()> {
     let atkinson_time = start.elapsed();
 
     let start = Instant::now();
-    black_box(quantize_burkes(&rgb_img, width, height));
-    let burkes_time = start.elapsed();
+    black_box(quantize_floyd_steinberg(&rgb_img, width, height));
+    let floyd_steinberg_time = start.elapsed();
+
+    let start = Instant::now();
+    black_box(quantize_clustered_dot(&rgb_img, width, height));
+    let clustered_dot_time = start.elapsed();
 
     let start = Instant::now();
     let _rgb_out = indices_to_rgb_image(&indices_bayer, width, height);
@@ -62,8 +67,12 @@ pub(in crate::cli) fn run(args: BenchmarkArgs) -> Result<()> {
         atkinson_time.as_secs_f64() * 1000.0
     );
     println!(
-        "Burkes mode:  {:>8.2}ms",
-        burkes_time.as_secs_f64() * 1000.0
+        "Floyd baseline:{:>6.2}ms",
+        floyd_steinberg_time.as_secs_f64() * 1000.0
+    );
+    println!(
+        "Clustered-dot:{:>7.2}ms",
+        clustered_dot_time.as_secs_f64() * 1000.0
     );
     println!(
         "RGB convert:   {:>8.2}ms",
@@ -86,8 +95,12 @@ pub(in crate::cli) fn run(args: BenchmarkArgs) -> Result<()> {
         (atkinson_time + convert_time).as_secs_f64() * 1000.0
     );
     println!(
-        "Total Burkes: {:>8.2}ms",
-        (burkes_time + convert_time).as_secs_f64() * 1000.0
+        "Total baseline:{:>5.2}ms",
+        (floyd_steinberg_time + convert_time).as_secs_f64() * 1000.0
+    );
+    println!(
+        "Total Cluster:{:>8.2}ms",
+        (clustered_dot_time + convert_time).as_secs_f64() * 1000.0
     );
 
     Ok(())

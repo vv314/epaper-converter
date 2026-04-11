@@ -115,8 +115,10 @@ pub enum DitherMode {
     Yliluoma,
     /// Atkinson dithering - sharper diffusion with less gray haze than Floyd
     Atkinson,
-    /// Burkes dithering - richer diffusion that keeps more tonal detail on six-color panels
-    Burkes,
+    /// Floyd-Steinberg dithering - classic error-diffusion baseline for comparison and tuning
+    FloydSteinberg,
+    /// Clustered-dot ordered dithering - print-like halftone dots with stable large-area textures
+    ClusteredDot,
 }
 
 #[derive(Default, Clone, Copy, Debug, ValueEnum, PartialEq, Eq)]

@@ -209,7 +209,10 @@ mod tests {
             with_artifact_tag("yliluoma_g100", Some("Lab Tune")),
             "yliluoma_g100_lab_tune"
         );
-        assert_eq!(with_artifact_tag("burkes", None), "burkes");
+        assert_eq!(
+            with_artifact_tag("floyd-steinberg", None),
+            "floyd-steinberg"
+        );
     }
 
     #[test]

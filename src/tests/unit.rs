@@ -5,8 +5,8 @@ use crate::pipeline::{
     palette_histogram_exact, palette_histogram_nearest, resize_with_mode,
 };
 use crate::quantize::{
-    quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_burkes, quantize_yliluoma,
-    PALETTE,
+    quantize_atkinson, quantize_bayer, quantize_blue_noise, quantize_clustered_dot,
+    quantize_floyd_steinberg, quantize_yliluoma, PALETTE,
 };
 use image::{DynamicImage, ImageBuffer, Rgb};
 
@@ -103,33 +103,35 @@ fn atkinson_quantizer_is_deterministic_with_serpentine_scan() {
 }
 
 #[test]
-fn burkes_quantizer_preserves_dimensions_and_palette_range() {
-    let img = ImageBuffer::from_fn(16, 16, |x, y| {
-        Rgb([
-            (x * 15) as u8,
-            (255 - y * 9) as u8,
-            ((x * 7 + y * 13) % 256) as u8,
-        ])
-    });
-    let indices = quantize_burkes(&img, 16, 16);
-
-    assert_eq!(indices.len(), 16 * 16);
-    assert!(indices.iter().all(|&idx| idx < PALETTE.len() as u8));
-}
-
-#[test]
-fn burkes_quantizer_is_deterministic_with_serpentine_scan() {
+fn floyd_steinberg_quantizer_is_deterministic_and_in_palette() {
     let img = ImageBuffer::from_fn(17, 11, |x, y| {
         Rgb([
-            ((x * 5 + y * 11) % 256) as u8,
-            ((x * 13 + y * 7) % 256) as u8,
+            ((x * 11 + y * 7) % 256) as u8,
+            ((x * 5 + y * 17) % 256) as u8,
             ((x * 19 + y * 3) % 256) as u8,
         ])
     });
-    let first = quantize_burkes(&img, 17, 11);
-    let second = quantize_burkes(&img, 17, 11);
+    let first = quantize_floyd_steinberg(&img, 17, 11);
+    let second = quantize_floyd_steinberg(&img, 17, 11);
 
     assert_eq!(first, second);
+    assert_eq!(first.len(), 17 * 11);
+    assert!(first.iter().all(|&idx| idx < PALETTE.len() as u8));
+}
+
+#[test]
+fn clustered_dot_quantizer_preserves_dimensions_and_palette_range() {
+    let img = ImageBuffer::from_fn(16, 16, |x, y| {
+        Rgb([
+            (x * 17) as u8,
+            ((x * 9 + y * 11) % 256) as u8,
+            (255 - y * 13) as u8,
+        ])
+    });
+    let indices = quantize_clustered_dot(&img, 16, 16);
+
+    assert_eq!(indices.len(), 16 * 16);
+    assert!(indices.iter().all(|&idx| idx < PALETTE.len() as u8));
 }
 
 #[test]

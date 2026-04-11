@@ -15,7 +15,7 @@
 - **高质量图像算法**：
   - **自动校正**：基于 EXIF 的智能方向校正
   - **清晰缩放**：采用 `Lanczos3` 高质量重采样，支持 `contain`（留白）、`cover`（裁切铺满）、`stretch`（拉伸）
-  - **丰富抖动模式**：内置 `bayer`、`blue-noise`、`yliluoma`、`atkinson`、`burkes` 五种半色调算法，适应不同场景
+  - **丰富抖动模式**：内置 `bayer`、`blue-noise`、`yliluoma`、`atkinson`、`floyd-steinberg`、`clustered-dot` 六种半色调算法，适应不同场景
 - **全能格式输入输出**：
   - **输入**：原生支持 `JPEG`、`PNG`、`BMP`
   - **输出**：支持生成直接刷屏的 `BIN`（1 Byte/Pixel）、专为微雪优化的 `PACKED` 紧凑内存（2 Pixels/Byte），以及用于 Web/调试预览的量化 `BMP`/`PNG`
@@ -73,7 +73,7 @@ epaper_converter convert input.jpg output.bin -f bin --dither atkinson
 | `output`          | 输出文件路径。                                                           | -         |
 | `-w, --width`     | 目标宽度。                                                               | `800`     |
 | `-H, --height`    | 目标高度。                                                               | `480`     |
-| `-d, --dither`    | 抖动模式，可选 `bayer`、`blue-noise`、`yliluoma`、`atkinson`、`burkes`。 | `bayer`   |
+| `-d, --dither`    | 抖动模式，可选 `bayer`、`blue-noise`、`yliluoma`、`atkinson`、`floyd-steinberg`、`clustered-dot`。 | `bayer`   |
 | `--resize-mode`   | 缩放策略，可选 `contain`、`cover`、`stretch`。                           | `contain` |
 | `--auto-rotate`   | 是否在缩放前应用 EXIF 自动旋转。                                         | `true`    |
 | `--gamma`         | Gamma 校正参数；`< 1.0` 提亮中间调，`> 1.0` 压暗中间调。                 | `1.0`     |
@@ -85,10 +85,13 @@ epaper_converter convert input.jpg output.bin -f bin --dither atkinson
 | 模式         | 特点                                     | 适用场景                               |
 | ------------ | ---------------------------------------- | -------------------------------------- |
 | `bayer`      | 规则阈值矩阵抖动，画面更干净、速度更快。 | 大多数墨水屏预览与常规照片             |
-| `blue-noise` | 蓝噪声阈值纹理，颗粒更细腻、规律感更弱。 | 渐变和大面积平滑过渡                   |
+| `blue-noise` | 预计算的 V&C 蓝噪声阈值纹理，颗粒更细腻、规律感更弱。 | 渐变和大面积平滑过渡                   |
 | `yliluoma`   | 调色板感知的有序抖动，颜色混合更柔和。   | 需要兼顾层次与配色过渡的图像           |
 | `atkinson`   | 更克制的误差扩散，层次更锐利。           | 细节复杂、局部反差高的图像             |
-| `burkes`     | 更完整的误差扩散，保留更多中间层次。     | 希望在细节和色块稳定性之间取平衡的图像 |
+| `floyd-steinberg` | 经典误差扩散工程对照模式，主要用于横向比较、调参与回归验收。 | 需要标准对照而非主推观感的场景 |
+| `clustered-dot` | 成团网点式有序抖动，纹理更像印刷半色调。 | 海报、插画、大色块和希望纹理更稳定的图像 |
+
+- `atkinson` 更偏最终观感输出；`floyd-steinberg` 更偏工程对照与算法验收，不作为主推视觉模式。
 
 **Gamma 使用建议**：
 
@@ -138,7 +141,7 @@ epaper_converter check preview.bmp --verbose
 
 ### 性能基准测试 (`benchmark`)
 
-评估当前设备上的转换耗时（包括 `bayer` / `blue-noise` / `yliluoma` / `atkinson` / `burkes` 模式及反向 RGB 生成）。
+评估当前设备上的转换耗时（包括 `bayer` / `blue-noise` / `yliluoma` / `atkinson` / `floyd-steinberg` / `clustered-dot` 模式及反向 RGB 生成）。
 
 ```bash
 epaper_converter benchmark photo.jpg

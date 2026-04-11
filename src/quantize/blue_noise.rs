@@ -1,106 +1,153 @@
 use image::RgbImage;
-use std::sync::OnceLock;
 
 use super::ordered::{apply_bias, ordered_bias};
 use super::palette::{nearest_color, warm_up_color_lut};
 
 const BLUE_NOISE_SIZE: usize = 32;
 const BLUE_NOISE_PIXELS: usize = BLUE_NOISE_SIZE * BLUE_NOISE_SIZE;
-const BLUE_NOISE_CANDIDATES: usize = 8;
 const BLUE_NOISE_STRENGTH: i32 = 44;
 
-static BLUE_NOISE_BIAS_MASK: OnceLock<Box<[i16]>> = OnceLock::new();
-
-struct SplitMix64 {
-    state: u64,
-}
-
-impl SplitMix64 {
-    #[inline(always)]
-    fn new(seed: u64) -> Self {
-        Self { state: seed }
-    }
-
-    #[inline(always)]
-    fn next_u32(&mut self) -> u32 {
-        self.state = self.state.wrapping_add(0x9E3779B97F4A7C15);
-        let mut z = self.state;
-        z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
-        z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
-        (z ^ (z >> 31)) as u32
-    }
-
-    #[inline(always)]
-    fn gen_index(&mut self, upper: usize) -> usize {
-        (self.next_u32() as usize) % upper
-    }
-}
+// 该 mask 由离线的 void-and-cluster 阈值图生成器预计算得到，运行时只做平铺查表。
+// 使用 32x32 周期性高斯能量场（sigma≈1.9）和 12.5% 原型密度，
+// 先稳定二值 prototype，再按经典的 remove-cluster / add-void / complement 三阶段生成完整 rank。
+const BLUE_NOISE_RANK_MASK: [[u16; 32]; 32] = [
+    [
+        921, 723, 848, 127, 538, 338, 748, 572, 979, 520, 84, 802, 468, 30, 877, 660, 954, 48, 703,
+        146, 864, 586, 746, 437, 334, 517, 142, 895, 246, 548, 133, 444,
+    ],
+    [
+        773, 567, 410, 963, 649, 893, 35, 420, 840, 171, 372, 245, 328, 623, 505, 764, 198, 354,
+        543, 968, 288, 394, 204, 1020, 113, 952, 459, 598, 812, 747, 321, 199,
+    ],
+    [
+        72, 250, 6, 303, 182, 453, 699, 224, 309, 631, 756, 889, 690, 115, 938, 76, 264, 462, 633,
+        776, 98, 487, 816, 619, 38, 715, 294, 363, 16, 980, 496, 835,
+    ],
+    [
+        606, 1017, 521, 810, 918, 601, 138, 794, 957, 481, 1, 1001, 187, 546, 383, 720, 999, 834,
+        10, 898, 325, 671, 67, 876, 552, 774, 215, 915, 643, 91, 692, 390,
+    ],
+    [
+        867, 659, 351, 704, 79, 274, 510, 874, 68, 560, 405, 284, 829, 442, 793, 300, 582, 152,
+        423, 238, 722, 978, 369, 257, 408, 165, 847, 525, 430, 279, 946, 156,
+    ],
+    [
+        463, 99, 214, 435, 974, 758, 388, 327, 678, 119, 732, 603, 144, 916, 37, 220, 676, 499,
+        922, 599, 178, 522, 129, 943, 664, 471, 1006, 124, 741, 206, 558, 315,
+    ],
+    [
+        725, 927, 780, 164, 574, 18, 644, 1013, 207, 842, 936, 237, 470, 641, 344, 872, 103, 768,
+        365, 64, 846, 445, 797, 579, 2, 324, 689, 52, 591, 902, 786, 25,
+    ],
+    [
+        252, 600, 381, 884, 476, 244, 908, 157, 457, 361, 527, 781, 61, 709, 1023, 561, 414, 956,
+        269, 650, 1009, 293, 737, 219, 910, 813, 266, 389, 838, 347, 488, 1000,
+    ],
+    [
+        116, 518, 59, 837, 319, 724, 536, 817, 615, 26, 299, 983, 393, 196, 504, 814, 19, 189, 713,
+        544, 108, 33, 628, 359, 151, 512, 613, 971, 177, 75, 669, 411,
+    ],
+    [
+        941, 635, 283, 682, 992, 46, 104, 403, 762, 899, 93, 655, 860, 270, 122, 312, 618, 469,
+        892, 331, 778, 495, 880, 422, 984, 92, 763, 439, 717, 549, 225, 851,
+    ],
+    [
+        330, 807, 200, 134, 432, 587, 928, 280, 216, 696, 554, 166, 440, 595, 923, 754, 973, 147,
+        827, 229, 392, 944, 192, 672, 563, 241, 870, 20, 297, 906, 131, 743,
+    ],
+    [
+        14, 557, 967, 491, 792, 343, 656, 502, 1002, 350, 474, 960, 721, 801, 82, 367, 663, 433,
+        45, 685, 590, 130, 839, 43, 728, 340, 480, 652, 947, 378, 610, 452,
+    ],
+    [
+        174, 714, 366, 886, 235, 750, 179, 858, 139, 62, 833, 242, 322, 9, 532, 223, 565, 285, 909,
+        515, 994, 254, 455, 301, 800, 1018, 145, 201, 524, 783, 259, 1005,
+    ],
+    [
+        855, 416, 74, 617, 106, 951, 7, 576, 425, 734, 630, 120, 890, 409, 688, 859, 1007, 181,
+        742, 102, 356, 761, 640, 531, 70, 386, 593, 828, 44, 697, 81, 498,
+    ],
+    [
+        305, 775, 674, 276, 541, 456, 700, 307, 965, 796, 380, 585, 503, 948, 150, 454, 57, 809,
+        399, 621, 5, 866, 172, 958, 883, 683, 277, 428, 976, 349, 888, 578,
+    ],
+    [
+        208, 926, 42, 1021, 832, 353, 896, 210, 526, 263, 32, 1015, 197, 757, 268, 638, 335, 712,
+        485, 949, 311, 566, 419, 111, 221, 493, 920, 749, 105, 248, 647, 137,
+    ],
+    [
+        434, 597, 513, 163, 398, 636, 56, 779, 153, 461, 853, 654, 313, 71, 825, 913, 596, 121,
+        249, 885, 205, 657, 822, 719, 362, 28, 624, 167, 553, 467, 803, 990,
+    ],
+    [
+        738, 339, 819, 233, 731, 117, 981, 580, 679, 931, 89, 368, 708, 479, 547, 387, 24, 964,
+        530, 769, 78, 466, 1008, 262, 539, 788, 308, 863, 950, 702, 370, 0,
+    ],
+    [
+        878, 100, 691, 450, 871, 289, 486, 332, 406, 815, 236, 562, 879, 170, 995, 222, 787, 304,
+        431, 161, 687, 333, 55, 897, 604, 970, 94, 400, 213, 63, 287, 535,
+    ],
+    [
+        176, 261, 962, 31, 605, 924, 193, 752, 17, 614, 132, 975, 765, 36, 443, 680, 135, 862, 627,
+        987, 556, 805, 396, 140, 190, 446, 740, 662, 507, 836, 612, 933,
+    ],
+    [
+        666, 484, 568, 375, 791, 69, 537, 1010, 273, 900, 508, 421, 291, 637, 345, 919, 577, 733,
+        371, 272, 12, 930, 729, 646, 516, 854, 15, 336, 1016, 136, 771, 407,
+    ],
+    [
+        826, 1003, 310, 148, 653, 427, 850, 154, 686, 358, 726, 202, 110, 845, 519, 260, 50, 475,
+        97, 209, 841, 494, 298, 230, 993, 373, 253, 569, 905, 449, 240, 80,
+    ],
+    [
+        27, 739, 211, 894, 711, 341, 234, 629, 447, 49, 934, 799, 594, 961, 705, 184, 1022, 759,
+        891, 668, 438, 588, 107, 767, 47, 684, 818, 118, 183, 707, 318, 589,
+    ],
+    [
+        869, 458, 542, 101, 945, 501, 760, 77, 875, 545, 314, 482, 3, 384, 86, 821, 413, 320, 528,
+        969, 169, 348, 953, 868, 550, 464, 939, 625, 755, 497, 959, 364,
+    ],
+    [
+        168, 258, 397, 808, 8, 286, 998, 584, 811, 180, 985, 651, 243, 903, 465, 559, 645, 239, 29,
+        806, 701, 66, 632, 404, 160, 323, 88, 281, 417, 41, 798, 634,
+    ],
+    [
+        914, 681, 986, 575, 639, 188, 415, 112, 379, 267, 745, 141, 693, 337, 772, 159, 932, 125,
+        607, 391, 282, 751, 509, 251, 912, 784, 592, 977, 873, 227, 534, 114,
+    ],
+    [
+        473, 766, 65, 326, 856, 483, 929, 706, 901, 514, 73, 418, 570, 997, 58, 296, 716, 831, 982,
+        472, 212, 852, 1012, 4, 675, 195, 523, 60, 374, 698, 1011, 302,
+    ],
+    [
+        609, 217, 377, 149, 736, 247, 661, 39, 317, 616, 955, 789, 843, 191, 500, 882, 436, 357,
+        540, 96, 904, 571, 143, 429, 342, 727, 844, 448, 648, 158, 830, 13,
+    ],
+    [
+        424, 940, 804, 529, 972, 441, 128, 555, 777, 218, 460, 22, 360, 275, 673, 602, 11, 186,
+        665, 735, 53, 295, 626, 823, 489, 991, 126, 255, 925, 564, 352, 744,
+    ],
+    [
+        887, 95, 583, 290, 23, 881, 824, 355, 1019, 155, 865, 642, 533, 935, 87, 753, 1014, 256,
+        917, 329, 451, 795, 376, 942, 226, 34, 608, 316, 790, 83, 203, 506,
+    ],
+    [
+        667, 173, 1004, 695, 395, 622, 194, 492, 718, 401, 292, 123, 730, 228, 820, 385, 490, 109,
+        782, 611, 988, 175, 694, 85, 551, 770, 402, 966, 478, 710, 861, 278,
+    ],
+    [
+        40, 346, 477, 232, 785, 90, 937, 265, 54, 670, 911, 581, 989, 426, 162, 306, 573, 849, 412,
+        231, 511, 21, 907, 271, 658, 857, 185, 677, 51, 382, 996, 620,
+    ],
+];
 
 #[inline(always)]
-fn nearest_distance_sq(x: usize, y: usize, points: &[(usize, usize)]) -> usize {
-    let mut best = usize::MAX;
-
-    for &(px, py) in points {
-        let dx = x.abs_diff(px);
-        let dy = y.abs_diff(py);
-        let dist = dx * dx + dy * dy;
-        best = best.min(dist);
-    }
-
-    best
-}
-
-fn blue_noise_bias_mask() -> &'static [i16] {
-    BLUE_NOISE_BIAS_MASK.get_or_init(|| {
-        let mut rng = SplitMix64::new(0xC0FEBABE_73EACE06);
-        let mut thresholds = vec![0u16; BLUE_NOISE_PIXELS];
-        let mut points = Vec::with_capacity(BLUE_NOISE_PIXELS);
-        let mut available = Vec::with_capacity(BLUE_NOISE_PIXELS);
-        let mut available_index = vec![0usize; BLUE_NOISE_PIXELS];
-
-        for pos in 0..BLUE_NOISE_PIXELS {
-            available_index[pos] = pos;
-            available.push(pos);
-        }
-
-        for rank in 0..BLUE_NOISE_PIXELS {
-            let samples = BLUE_NOISE_CANDIDATES.min(available.len()).max(1);
-            let mut best_pos = available[0];
-            let mut best_dist = 0usize;
-
-            if points.is_empty() {
-                best_pos = available[rng.gen_index(available.len())];
-            } else {
-                for _ in 0..samples {
-                    let candidate = available[rng.gen_index(available.len())];
-                    let x = candidate & (BLUE_NOISE_SIZE - 1);
-                    let y = candidate / BLUE_NOISE_SIZE;
-                    let dist = nearest_distance_sq(x, y, &points);
-
-                    if dist > best_dist {
-                        best_dist = dist;
-                        best_pos = candidate;
-                    }
-                }
-            }
-
-            thresholds[best_pos] = rank as u16;
-            points.push((best_pos & (BLUE_NOISE_SIZE - 1), best_pos / BLUE_NOISE_SIZE));
-
-            let remove_idx = available_index[best_pos];
-            let tail_idx = available.len() - 1;
-            let tail_pos = available[tail_idx];
-            available.swap(remove_idx, tail_idx);
-            available_index[tail_pos] = remove_idx;
-            available.pop();
-        }
-
-        thresholds
-            .into_iter()
-            .map(|rank| ordered_bias(rank, BLUE_NOISE_PIXELS as i32, BLUE_NOISE_STRENGTH) as i16)
-            .collect::<Vec<_>>()
-            .into_boxed_slice()
-    })
+fn blue_noise_bias(x: usize, y: usize) -> i32 {
+    ordered_bias(
+        BLUE_NOISE_RANK_MASK[y & (BLUE_NOISE_SIZE - 1)][x & (BLUE_NOISE_SIZE - 1)],
+        BLUE_NOISE_PIXELS as i32,
+        BLUE_NOISE_STRENGTH,
+    )
 }
 
 pub(crate) fn quantize_blue_noise(img: &RgbImage, width: u32, height: u32) -> Vec<u8> {
@@ -109,16 +156,13 @@ pub(crate) fn quantize_blue_noise(img: &RgbImage, width: u32, height: u32) -> Ve
     let width = width as usize;
     let height = height as usize;
     let raw = img.as_raw();
-    let mask = blue_noise_bias_mask();
     let mut output = vec![0u8; width * height];
 
     for y in 0..height {
-        let mask_row = (y & (BLUE_NOISE_SIZE - 1)) * BLUE_NOISE_SIZE;
-
         for x in 0..width {
             let idx = y * width + x;
             let src_base = idx * 3;
-            let bias = mask[mask_row + (x & (BLUE_NOISE_SIZE - 1))] as i32;
+            let bias = blue_noise_bias(x, y);
             let r = apply_bias(raw[src_base], bias);
             let g = apply_bias(raw[src_base + 1], bias);
             let b = apply_bias(raw[src_base + 2], bias);
@@ -127,4 +171,24 @@ pub(crate) fn quantize_blue_noise(img: &RgbImage, width: u32, height: u32) -> Ve
     }
 
     output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{BLUE_NOISE_PIXELS, BLUE_NOISE_RANK_MASK};
+
+    #[test]
+    fn precomputed_vac_mask_is_full_permutation() {
+        let mut seen = vec![false; BLUE_NOISE_PIXELS];
+
+        for row in BLUE_NOISE_RANK_MASK {
+            for rank in row {
+                assert!((rank as usize) < BLUE_NOISE_PIXELS);
+                assert!(!seen[rank as usize], "duplicate rank {rank}");
+                seen[rank as usize] = true;
+            }
+        }
+
+        assert!(seen.into_iter().all(|value| value));
+    }
 }
