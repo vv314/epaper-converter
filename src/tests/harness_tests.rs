@@ -1,17 +1,28 @@
-use super::harness::{self, FIXTURE_NAMES, GAMMA_CASES, TARGET_HEIGHT, TARGET_WIDTH};
+use std::path::PathBuf;
+
+use super::harness::{self, GAMMA_CASES, TARGET_HEIGHT, TARGET_WIDTH};
 use crate::cli::DitherMode;
+
+fn fixture_path(name: &str) -> anyhow::Result<PathBuf> {
+    Ok(harness::fixture_specs()?
+        .iter()
+        .find(|fixture| fixture.name == name)
+        .map(|fixture| fixture.path.clone())
+        .expect("fixture present"))
+}
 
 #[test]
 #[ignore = "Generates `output/` preview fixtures for manual algorithm review"]
 fn harness_regenerates_cover_png_outputs() -> anyhow::Result<()> {
     let rendered = harness::render_standard_suite()?;
     let selected_modes = harness::selected_harness_dither_cases()?;
+    let fixtures = harness::fixture_specs()?;
 
     println!("\n{}", harness::format_suite_report(&rendered));
 
     assert_eq!(
         rendered.len(),
-        FIXTURE_NAMES.len() * selected_modes.len(),
+        fixtures.len() * selected_modes.len(),
         "expected harness to render every fixture/mode combination"
     );
     assert!(rendered.iter().all(|case| case.output_path.is_file()));
@@ -22,7 +33,7 @@ fn harness_regenerates_cover_png_outputs() -> anyhow::Result<()> {
         case.output_path
             .file_name()
             .and_then(|name| name.to_str())
-            .is_some_and(|name| name.starts_with(case.fixture_name))
+            .is_some_and(|name| name.starts_with(&case.fixture_name))
     }));
     assert!(rendered.iter().all(|case| selected_modes
         .iter()
@@ -35,6 +46,7 @@ fn harness_regenerates_cover_png_outputs() -> anyhow::Result<()> {
 fn harness_uses_panel_target_dimensions() -> anyhow::Result<()> {
     let rendered = harness::render_fixture_to_output(
         "gradient",
+        &fixture_path("gradient")?,
         DitherMode::Bayer,
         "bayer_test",
         1.0,
@@ -52,6 +64,7 @@ fn harness_uses_panel_target_dimensions() -> anyhow::Result<()> {
 fn harness_formats_palette_summary_for_humans() -> anyhow::Result<()> {
     let rendered = harness::render_fixture_to_output(
         "gradient",
+        &fixture_path("gradient")?,
         DitherMode::Bayer,
         "bayer_summary",
         1.0,
@@ -76,6 +89,7 @@ fn harness_formats_fixture_leaderboard() -> anyhow::Result<()> {
     let rendered = vec![
         harness::render_fixture_to_output(
             "gradient",
+            &fixture_path("gradient")?,
             DitherMode::Bayer,
             "bayer_rank",
             1.0,
@@ -83,6 +97,7 @@ fn harness_formats_fixture_leaderboard() -> anyhow::Result<()> {
         )?,
         harness::render_fixture_to_output(
             "gradient",
+            &fixture_path("gradient")?,
             DitherMode::Atkinson,
             "atkinson_rank",
             1.15,
@@ -90,6 +105,7 @@ fn harness_formats_fixture_leaderboard() -> anyhow::Result<()> {
         )?,
         harness::render_fixture_to_output(
             "tree",
+            &fixture_path("tree")?,
             DitherMode::BlueNoise,
             "blue_rank",
             0.85,
@@ -117,6 +133,7 @@ fn harness_formats_mode_summary_and_recommendations() -> anyhow::Result<()> {
     let rendered = vec![
         harness::render_fixture_to_output(
             "gradient",
+            &fixture_path("gradient")?,
             DitherMode::Bayer,
             "bayer_perf",
             1.0,
@@ -124,6 +141,7 @@ fn harness_formats_mode_summary_and_recommendations() -> anyhow::Result<()> {
         )?,
         harness::render_fixture_to_output(
             "gradient",
+            &fixture_path("gradient")?,
             DitherMode::BlueNoise,
             "blue_perf",
             0.85,
@@ -131,6 +149,7 @@ fn harness_formats_mode_summary_and_recommendations() -> anyhow::Result<()> {
         )?,
         harness::render_fixture_to_output(
             "tree",
+            &fixture_path("tree")?,
             DitherMode::Atkinson,
             "atkinson_perf",
             1.15,
@@ -161,6 +180,7 @@ fn harness_builds_and_compares_baseline_snapshot() -> anyhow::Result<()> {
     let rendered = vec![
         harness::render_fixture_to_output(
             "gradient",
+            &fixture_path("gradient")?,
             DitherMode::Bayer,
             "bayer_base",
             1.0,
@@ -168,6 +188,7 @@ fn harness_builds_and_compares_baseline_snapshot() -> anyhow::Result<()> {
         )?,
         harness::render_fixture_to_output(
             "tree",
+            &fixture_path("tree")?,
             DitherMode::BlueNoise,
             "blue_base",
             0.85,
@@ -198,6 +219,7 @@ fn harness_builds_and_compares_baseline_snapshot() -> anyhow::Result<()> {
 fn harness_detects_regression_from_snapshot_text() -> anyhow::Result<()> {
     let rendered = vec![harness::render_fixture_to_output(
         "gradient",
+        &fixture_path("gradient")?,
         DitherMode::Bayer,
         "bayer_regression",
         1.0,
@@ -224,6 +246,7 @@ fn harness_detects_regression_from_snapshot_text() -> anyhow::Result<()> {
 fn harness_scans_gamma_candidates_and_prints_leaderboard() -> anyhow::Result<()> {
     let rendered = harness::render_gamma_sweep()?;
     let selected_modes = harness::selected_harness_dither_cases()?;
+    let fixtures = harness::fixture_specs()?;
     let baseline = harness::build_baseline_snapshot(&rendered);
     let comparisons = harness::compare_against_baseline(&rendered, &baseline)?;
 
@@ -235,7 +258,7 @@ fn harness_scans_gamma_candidates_and_prints_leaderboard() -> anyhow::Result<()>
 
     assert_eq!(
         rendered.len(),
-        FIXTURE_NAMES.len() * selected_modes.len() * GAMMA_CASES.len(),
+        fixtures.len() * selected_modes.len() * GAMMA_CASES.len(),
         "expected gamma sweep to cover every fixture/mode/gamma combination"
     );
     assert!(rendered.iter().all(|case| case.output_path.is_file()));

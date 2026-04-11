@@ -44,7 +44,7 @@ pub(crate) fn compare_against_baseline(
         .map(|case| {
             (
                 baseline_key(
-                    case.fixture_name,
+                    &case.fixture_name,
                     case.gamma_slug,
                     dither_mode_slug(case.requested_mode),
                 ),

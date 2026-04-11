@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::cli::DitherMode;
 
 pub(crate) struct RenderedFixture {
-    pub(crate) fixture_name: &'static str,
+    pub(crate) fixture_name: String,
     pub(crate) gamma: f32,
     pub(crate) gamma_slug: &'static str,
     pub(crate) requested_mode: DitherMode,
@@ -15,7 +15,7 @@ pub(crate) struct RenderedFixture {
 
 #[derive(Clone, Copy)]
 pub(crate) struct RankedCandidate<'a> {
-    pub(crate) fixture_name: &'static str,
+    pub(crate) fixture_name: &'a str,
     pub(crate) gamma: f32,
     pub(crate) gamma_slug: &'static str,
     pub(crate) requested_mode: DitherMode,
@@ -70,7 +70,8 @@ pub(crate) struct BaselineEntry {
 }
 
 pub(crate) struct RenderRequest {
-    pub(crate) fixture_name: &'static str,
+    pub(crate) fixture_name: String,
+    pub(crate) input_path: PathBuf,
     pub(crate) requested_mode: DitherMode,
     pub(crate) output_slug: String,
     pub(crate) gamma: f32,

@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use super::{
     compare_rendered_fixture, dither_mode_slug, fastest_candidate, overall_best_candidate,
-    ModeAggregateSummary, RankedCandidate, RenderedFixture, FIXTURE_NAMES, HARNESS_DITHER_CASES,
+    ModeAggregateSummary, RankedCandidate, RenderedFixture, HARNESS_DITHER_CASES,
 };
 
 pub(crate) fn format_suite_report(rendered: &[RenderedFixture]) -> String {
@@ -37,16 +37,29 @@ pub(crate) fn format_suite_report(rendered: &[RenderedFixture]) -> String {
 pub(crate) fn rank_best_candidates_per_fixture(
     rendered: &[RenderedFixture],
 ) -> Vec<RankedCandidate<'_>> {
-    FIXTURE_NAMES
-        .iter()
+    ordered_fixture_names(rendered)
+        .into_iter()
         .filter_map(|fixture_name| {
             rendered
                 .iter()
-                .filter(|case| case.fixture_name == *fixture_name)
+                .filter(|case| case.fixture_name == fixture_name)
                 .min_by(compare_rendered_fixture)
                 .map(RankedCandidate::from)
         })
         .collect()
+}
+
+fn ordered_fixture_names(rendered: &[RenderedFixture]) -> Vec<&str> {
+    let mut ordered = Vec::new();
+
+    for case in rendered {
+        let fixture_name = case.fixture_name.as_str();
+        if !ordered.contains(&fixture_name) {
+            ordered.push(fixture_name);
+        }
+    }
+
+    ordered
 }
 
 pub(crate) fn format_leaderboard(rendered: &[RenderedFixture]) -> String {

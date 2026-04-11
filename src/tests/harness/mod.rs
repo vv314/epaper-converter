@@ -17,7 +17,7 @@ use crate::quantize::{
 };
 
 pub(super) use config::{
-    TempImageFile, DEFAULT_GAMMA, FIXTURE_NAMES, GAMMA_CASES, HARNESS_DITHER_CASES, TARGET_HEIGHT,
+    fixture_specs, TempImageFile, DEFAULT_GAMMA, GAMMA_CASES, HARNESS_DITHER_CASES, TARGET_HEIGHT,
     TARGET_WIDTH,
 };
 pub(super) use model::{
@@ -37,7 +37,7 @@ fn prune_output_dir_for_requests(requests: &[RenderRequest]) -> Result<()> {
     fs::create_dir_all(&dir).context("Failed to create output directory")?;
 
     for request in requests {
-        let path = output_path_for_request(request.fixture_name, &request.output_slug);
+        let path = output_path_for_request(&request.fixture_name, &request.output_slug);
         if path.is_file() {
             fs::remove_file(&path)
                 .with_context(|| format!("Failed to remove output file: {}", path.display()))?;
@@ -168,7 +168,7 @@ fn ratio(count: u64, total: u64) -> f64 {
 impl<'a> From<&'a RenderedFixture> for RankedCandidate<'a> {
     fn from(value: &'a RenderedFixture) -> Self {
         Self {
-            fixture_name: value.fixture_name,
+            fixture_name: value.fixture_name.as_str(),
             gamma: value.gamma,
             gamma_slug: value.gamma_slug,
             requested_mode: value.requested_mode,
@@ -177,13 +177,6 @@ impl<'a> From<&'a RenderedFixture> for RankedCandidate<'a> {
             palette_report: &value.palette_report,
         }
     }
-}
-
-fn fixture_path(fixture_name: &str) -> PathBuf {
-    manifest_dir()
-        .join("tests")
-        .join("fixtures")
-        .join(format!("{fixture_name}.jpg"))
 }
 
 fn output_dir() -> PathBuf {

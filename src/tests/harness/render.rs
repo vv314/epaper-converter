@@ -1,15 +1,16 @@
 use anyhow::{Context, Result};
 use rayon::prelude::*;
 use std::fs;
+use std::path::Path;
 use std::time::Instant;
 
 use crate::cli::{DitherMode, ResizeMode};
 use crate::pipeline::prepare_image;
 
 use super::{
-    build_palette_report, fixture_path, output_dir, output_path_for_request,
+    build_palette_report, fixture_specs, output_dir, output_path_for_request,
     prune_output_dir_for_requests, quantize_image, RenderRequest, RenderedFixture, DEFAULT_GAMMA,
-    FIXTURE_NAMES, GAMMA_CASES, HARNESS_DITHER_CASES, TARGET_HEIGHT, TARGET_WIDTH,
+    GAMMA_CASES, HARNESS_DITHER_CASES, TARGET_HEIGHT, TARGET_WIDTH,
 };
 
 const HARNESS_ARTIFACT_TAG_ENV: &str = "EPAPER_HARNESS_TAG";
@@ -34,12 +35,14 @@ fn render_standard_suite_with_options(
 ) -> Result<Vec<RenderedFixture>> {
     let normalized_tag = sanitize_artifact_tag(artifact_tag);
     let dither_cases = filtered_dither_cases(mode_filter)?;
+    let fixtures = fixture_specs()?;
 
-    let mut requests = Vec::with_capacity(FIXTURE_NAMES.len() * dither_cases.len());
-    for fixture_name in FIXTURE_NAMES {
+    let mut requests = Vec::with_capacity(fixtures.len() * dither_cases.len());
+    for fixture in fixtures {
         for (requested_mode, slug) in &dither_cases {
             requests.push(RenderRequest {
-                fixture_name,
+                fixture_name: fixture.name.clone(),
+                input_path: fixture.path.clone(),
                 requested_mode: *requested_mode,
                 output_slug: with_artifact_tag(slug, normalized_tag.as_deref()),
                 gamma: DEFAULT_GAMMA,
@@ -71,14 +74,15 @@ fn render_gamma_sweep_with_options(
 ) -> Result<Vec<RenderedFixture>> {
     let normalized_tag = sanitize_artifact_tag(artifact_tag);
     let dither_cases = filtered_dither_cases(mode_filter)?;
+    let fixtures = fixture_specs()?;
 
-    let mut requests =
-        Vec::with_capacity(FIXTURE_NAMES.len() * dither_cases.len() * GAMMA_CASES.len());
-    for fixture_name in FIXTURE_NAMES {
+    let mut requests = Vec::with_capacity(fixtures.len() * dither_cases.len() * GAMMA_CASES.len());
+    for fixture in fixtures {
         for (requested_mode, mode_slug) in &dither_cases {
             for (gamma, gamma_slug) in GAMMA_CASES {
                 requests.push(RenderRequest {
-                    fixture_name,
+                    fixture_name: fixture.name.clone(),
+                    input_path: fixture.path.clone(),
                     requested_mode: *requested_mode,
                     output_slug: with_artifact_tag(
                         &format!("{mode_slug}_{gamma_slug}"),
@@ -96,7 +100,8 @@ fn render_gamma_sweep_with_options(
 }
 
 pub(crate) fn render_fixture_to_output(
-    fixture_name: &'static str,
+    fixture_name: &str,
+    input_path: &Path,
     requested_mode: DitherMode,
     output_slug: &str,
     gamma: f32,
@@ -105,9 +110,8 @@ pub(crate) fn render_fixture_to_output(
     fs::create_dir_all(output_dir()).context("Failed to create output directory")?;
     let start = Instant::now();
 
-    let input_path = fixture_path(fixture_name);
     let rgb_img = prepare_image(
-        &input_path,
+        input_path,
         TARGET_WIDTH,
         TARGET_HEIGHT,
         ResizeMode::Cover,
@@ -127,7 +131,7 @@ pub(crate) fn render_fixture_to_output(
     let elapsed_ms = start.elapsed().as_millis();
 
     Ok(RenderedFixture {
-        fixture_name,
+        fixture_name: fixture_name.to_string(),
         gamma,
         gamma_slug,
         requested_mode,
@@ -143,7 +147,8 @@ fn render_requests_in_parallel(requests: Vec<RenderRequest>) -> Result<Vec<Rende
         .par_iter()
         .map(|request| {
             render_fixture_to_output(
-                request.fixture_name,
+                &request.fixture_name,
+                &request.input_path,
                 request.requested_mode,
                 &request.output_slug,
                 request.gamma,
@@ -310,13 +315,14 @@ mod tests {
     #[test]
     fn prune_output_dir_only_removes_files_for_current_requests() -> Result<()> {
         let request = RenderRequest {
-            fixture_name: "gradient",
+            fixture_name: "gradient".to_string(),
+            input_path: output_dir().join("gradient.jpg"),
             requested_mode: DitherMode::Bayer,
             output_slug: "bayer_vnext".to_string(),
             gamma: 1.0,
             gamma_slug: "g100",
         };
-        let matching_path = output_path_for_request(request.fixture_name, &request.output_slug);
+        let matching_path = output_path_for_request(&request.fixture_name, &request.output_slug);
         let unrelated_path = output_dir().join("keep-me.txt");
 
         fs::create_dir_all(output_dir())?;
