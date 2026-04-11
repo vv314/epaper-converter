@@ -89,6 +89,7 @@ pub(crate) fn exact_palette_index(color: [u8; 3]) -> Option<u8> {
         .map(|idx| idx as u8)
 }
 
+#[allow(dead_code)]
 #[inline(always)]
 pub(super) fn lab_components_from_rgb(color: [u8; 3]) -> [f32; 3] {
     let lab = Lab::from_rgb(&color);
@@ -119,6 +120,7 @@ fn linear_luma(linear: [f32; 3]) -> f32 {
     linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722
 }
 
+#[allow(dead_code)]
 #[inline(always)]
 pub(super) fn ciede2000_distance_sq(lhs: [f32; 3], rhs: [f32; 3]) -> f32 {
     let (l1, a1, b1) = (lhs[0], lhs[1], lhs[2]);

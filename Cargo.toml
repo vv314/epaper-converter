@@ -16,6 +16,10 @@ anyhow = "1.0"
 kamadak-exif = "0.6"
 lab = "0.11.0"
 
+[build-dependencies]
+lab = "0.11.0"
+rayon = "1.10"
+
 [dev-dependencies]
 rayon = "1.10"
 

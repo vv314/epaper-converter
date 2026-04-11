@@ -2,36 +2,43 @@ use image::RgbImage;
 use std::sync::OnceLock;
 
 use super::ordered::ordered_threshold_8x8;
-use super::palette::{ciede2000_distance_sq, lab_components_from_rgb, palette_luma, PALETTE};
+use super::palette::{palette_luma, PALETTE};
 
 const YLILUOMA_CACHE_BITS: u8 = 6;
 const YLILUOMA_PLAN_SIZE: usize = 8;
 const YLILUOMA_CACHE_SIZE: usize = 1 << ((YLILUOMA_CACHE_BITS as usize) * 3);
-const YLILUOMA_CACHE_SENTINEL: u16 = u16::MAX;
-const YLILUOMA_SHORTLIST_SIZE: usize = 48;
-const YLILUOMA_GAMMA: f32 = 2.2;
 const YLILUOMA_LUMA_SPAN_FACTOR: f32 = 7.0;
 
 static YLILUOMA_MIXES: OnceLock<Box<[PrecomputedMix]>> = OnceLock::new();
+static YLILUOMA_BEST_MIX_LUT: OnceLock<Box<[u16]>> = OnceLock::new();
 
 #[derive(Clone, Copy)]
 struct YliluomaMixPlan {
-    len: u8,
-    colors: [u8; YLILUOMA_PLAN_SIZE],
+    threshold_colors: [u8; 64],
 }
 
 impl YliluomaMixPlan {
     #[inline(always)]
+    fn from_sorted_colors(colors: [u8; YLILUOMA_PLAN_SIZE], len: usize) -> Self {
+        let mut threshold_colors = [0u8; 64];
+        let last_idx = len.saturating_sub(1);
+
+        for (threshold, entry) in threshold_colors.iter_mut().enumerate() {
+            let idx = (threshold * len) / 64;
+            *entry = colors[idx.min(last_idx)];
+        }
+
+        Self { threshold_colors }
+    }
+
+    #[inline(always)]
     fn color_at_threshold(&self, threshold: usize) -> u8 {
-        let len = self.len as usize;
-        let idx = (threshold * len) / 64;
-        self.colors[idx.min(len.saturating_sub(1))]
+        self.threshold_colors[threshold]
     }
 }
 
 #[derive(Clone, Copy)]
 struct PrecomputedMix {
-    mixed_lab: [f32; 3],
     plan: YliluomaMixPlan,
 }
 
@@ -43,19 +50,20 @@ fn yliluoma_cache_key(r: u8, g: u8, b: u8) -> usize {
         | (b >> shift) as usize
 }
 
-#[inline(always)]
-fn yliluoma_cache_rgb(key: usize) -> [u8; 3] {
-    let mask = (1usize << (YLILUOMA_CACHE_BITS as usize)) - 1;
-    let b6 = key & mask;
-    let g6 = (key >> (YLILUOMA_CACHE_BITS as usize)) & mask;
-    let r6 = (key >> ((YLILUOMA_CACHE_BITS as usize) * 2)) & mask;
+fn yliluoma_best_mix_lut() -> &'static [u16] {
+    const LUT_BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/yliluoma_best_mix_lut.bin"));
 
-    let expand = |v: usize| {
-        let v = v as u8;
-        (v << 2) | (v >> 4)
-    };
-
-    [expand(r6), expand(g6), expand(b6)]
+    YLILUOMA_BEST_MIX_LUT.get_or_init(|| {
+        debug_assert_eq!(
+            LUT_BYTES.len(),
+            YLILUOMA_CACHE_SIZE * std::mem::size_of::<u16>()
+        );
+        LUT_BYTES
+            .chunks_exact(2)
+            .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+            .collect::<Vec<_>>()
+            .into_boxed_slice()
+    })
 }
 
 fn luma_sorted_palette_indices() -> Vec<u8> {
@@ -63,31 +71,6 @@ fn luma_sorted_palette_indices() -> Vec<u8> {
     let luma = palette_luma();
     indices.sort_by(|lhs, rhs| luma[*lhs as usize].total_cmp(&luma[*rhs as usize]));
     indices
-}
-
-#[inline(always)]
-fn gamma_correct(channel: u8) -> f32 {
-    (channel as f32 / 255.0).powf(YLILUOMA_GAMMA)
-}
-
-#[inline(always)]
-fn gamma_uncorrect(value: f32) -> u8 {
-    let value = value.clamp(0.0, 1.0);
-    (value.powf(1.0 / YLILUOMA_GAMMA) * 255.0)
-        .round()
-        .clamp(0.0, 255.0) as u8
-}
-
-fn gamma_corrected_palette() -> [[f32; 3]; PALETTE.len()] {
-    let mut corrected = [[0.0; 3]; PALETTE.len()];
-    for (idx, color) in PALETTE.iter().enumerate() {
-        corrected[idx] = [
-            gamma_correct(color[0]),
-            gamma_correct(color[1]),
-            gamma_correct(color[2]),
-        ];
-    }
-    corrected
 }
 
 fn luma_span_limit(luma_order: &[u8]) -> f32 {
@@ -113,13 +96,10 @@ fn push_precomputed_mix(
     counts: &[u8; PALETTE.len()],
     total: usize,
     luma_order: &[u8],
-    palette_gamma: &[[f32; 3]; PALETTE.len()],
     luma_limit: f32,
     mixes: &mut Vec<PrecomputedMix>,
 ) {
-    let inv_total = 1.0 / total as f32;
     let palette_luma = palette_luma();
-    let mut mixed_gamma = [0.0f32; 3];
     let mut colors = [0u8; YLILUOMA_PLAN_SIZE];
     let mut len = 0usize;
     let mut min_luma = f32::INFINITY;
@@ -135,11 +115,6 @@ fn push_precomputed_mix(
         min_luma = min_luma.min(luma);
         max_luma = max_luma.max(luma);
 
-        for channel in 0..3 {
-            mixed_gamma[channel] +=
-                palette_gamma[palette_idx as usize][channel] * count as f32 * inv_total;
-        }
-
         for _ in 0..count {
             colors[len] = palette_idx;
             len += 1;
@@ -152,18 +127,8 @@ fn push_precomputed_mix(
         return;
     }
 
-    let mixed_rgb = [
-        gamma_uncorrect(mixed_gamma[0]),
-        gamma_uncorrect(mixed_gamma[1]),
-        gamma_uncorrect(mixed_gamma[2]),
-    ];
-
     mixes.push(PrecomputedMix {
-        mixed_lab: lab_components_from_rgb(mixed_rgb),
-        plan: YliluomaMixPlan {
-            len: total as u8,
-            colors,
-        },
+        plan: YliluomaMixPlan::from_sorted_colors(colors, total),
     });
 }
 
@@ -172,7 +137,6 @@ fn build_mix_combinations(
     remaining: usize,
     counts: &mut [u8; PALETTE.len()],
     luma_order: &[u8],
-    palette_gamma: &[[f32; 3]; PALETTE.len()],
     luma_limit: f32,
     mixes: &mut Vec<PrecomputedMix>,
 ) {
@@ -182,7 +146,6 @@ fn build_mix_combinations(
             counts,
             counts.iter().map(|&count| count as usize).sum(),
             luma_order,
-            palette_gamma,
             luma_limit,
             mixes,
         );
@@ -196,7 +159,6 @@ fn build_mix_combinations(
             remaining - count,
             counts,
             luma_order,
-            palette_gamma,
             luma_limit,
             mixes,
         );
@@ -206,7 +168,6 @@ fn build_mix_combinations(
 fn yliluoma_mixes() -> &'static [PrecomputedMix] {
     YLILUOMA_MIXES.get_or_init(|| {
         let luma_order = luma_sorted_palette_indices();
-        let palette_gamma = gamma_corrected_palette();
         let luma_limit = luma_span_limit(&luma_order);
         let mut mixes = Vec::new();
         let mut counts = [0u8; PALETTE.len()];
@@ -219,94 +180,27 @@ fn yliluoma_mixes() -> &'static [PrecomputedMix] {
         // 因此可以直接全量预计算，避免旧实现那种逐像素枚举/评分的重 CPU 热点。
         for total in 1..=YLILUOMA_PLAN_SIZE {
             counts.fill(0);
-            build_mix_combinations(
-                0,
-                total,
-                &mut counts,
-                &luma_order,
-                &palette_gamma,
-                luma_limit,
-                &mut mixes,
-            );
+            build_mix_combinations(0, total, &mut counts, &luma_order, luma_limit, &mut mixes);
         }
 
         mixes.into_boxed_slice()
     })
 }
 
-#[inline(always)]
-fn lab_distance_sq(lhs: [f32; 3], rhs: [f32; 3]) -> f32 {
-    let dl = lhs[0] - rhs[0];
-    let da = lhs[1] - rhs[1];
-    let db = lhs[2] - rhs[2];
-    dl * dl + da * da + db * db
-}
-
-fn best_mix_index_for_key(key: usize, mixes: &[PrecomputedMix]) -> u16 {
-    let target_lab = lab_components_from_rgb(yliluoma_cache_rgb(key));
-    let mut shortlist_indices = [0u16; YLILUOMA_SHORTLIST_SIZE];
-    let mut shortlist_scores = [f32::INFINITY; YLILUOMA_SHORTLIST_SIZE];
-    let mut shortlist_len = 0usize;
-    let mut worst_slot = 0usize;
-    let mut best_index = 0u16;
-    let mut best_score = f32::INFINITY;
-
-    for (idx, mix) in mixes.iter().enumerate() {
-        let approx_score = lab_distance_sq(target_lab, mix.mixed_lab);
-
-        if shortlist_len < YLILUOMA_SHORTLIST_SIZE {
-            shortlist_indices[shortlist_len] = idx as u16;
-            shortlist_scores[shortlist_len] = approx_score;
-            if approx_score > shortlist_scores[worst_slot] {
-                worst_slot = shortlist_len;
-            }
-            shortlist_len += 1;
-            continue;
-        }
-
-        if approx_score < shortlist_scores[worst_slot] {
-            shortlist_indices[worst_slot] = idx as u16;
-            shortlist_scores[worst_slot] = approx_score;
-
-            worst_slot = 0;
-            for slot in 1..YLILUOMA_SHORTLIST_SIZE {
-                if shortlist_scores[slot] > shortlist_scores[worst_slot] {
-                    worst_slot = slot;
-                }
-            }
-        }
-    }
-
-    for &mix_idx in shortlist_indices.iter().take(shortlist_len) {
-        let score = ciede2000_distance_sq(target_lab, mixes[mix_idx as usize].mixed_lab);
-        if score < best_score {
-            best_score = score;
-            best_index = mix_idx;
-        }
-    }
-
-    best_index
-}
-
 pub(crate) fn quantize_yliluoma(img: &RgbImage, width: u32, height: u32) -> Vec<u8> {
     let mixes = yliluoma_mixes();
+    let best_mix_lut = yliluoma_best_mix_lut();
     let width = width as usize;
     let height = height as usize;
     let raw = img.as_raw();
     let mut output = vec![0u8; width * height];
-    let mut plan_cache = vec![YLILUOMA_CACHE_SENTINEL; YLILUOMA_CACHE_SIZE];
 
     for y in 0..height {
         for x in 0..width {
             let idx = y * width + x;
             let src_base = idx * 3;
             let key = yliluoma_cache_key(raw[src_base], raw[src_base + 1], raw[src_base + 2]);
-
-            if plan_cache[key] == YLILUOMA_CACHE_SENTINEL {
-                plan_cache[key] = best_mix_index_for_key(key, mixes);
-            }
-
-            let plan = mixes[plan_cache[key] as usize].plan;
+            let plan = mixes[best_mix_lut[key] as usize].plan;
             output[idx] = plan.color_at_threshold(ordered_threshold_8x8(x, y));
         }
     }
