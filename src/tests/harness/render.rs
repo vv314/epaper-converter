@@ -13,23 +13,34 @@ use super::{
 };
 
 const HARNESS_ARTIFACT_TAG_ENV: &str = "EPAPER_HARNESS_TAG";
+const HARNESS_DITHER_FILTER_ENV: &str = "EPAPER_HARNESS_MODES";
 
 pub(crate) fn render_standard_suite() -> Result<Vec<RenderedFixture>> {
     let artifact_tag = current_artifact_tag();
-    render_standard_suite_with_tag(artifact_tag.as_deref())
+    let mode_filter = current_dither_filter();
+    render_standard_suite_with_options(artifact_tag.as_deref(), mode_filter.as_deref())
 }
 
+#[allow(dead_code)]
 pub(crate) fn render_standard_suite_with_tag(
     artifact_tag: Option<&str>,
 ) -> Result<Vec<RenderedFixture>> {
-    let normalized_tag = sanitize_artifact_tag(artifact_tag);
+    render_standard_suite_with_options(artifact_tag, None)
+}
 
-    let mut requests = Vec::with_capacity(FIXTURE_NAMES.len() * HARNESS_DITHER_CASES.len());
+fn render_standard_suite_with_options(
+    artifact_tag: Option<&str>,
+    mode_filter: Option<&str>,
+) -> Result<Vec<RenderedFixture>> {
+    let normalized_tag = sanitize_artifact_tag(artifact_tag);
+    let dither_cases = filtered_dither_cases(mode_filter)?;
+
+    let mut requests = Vec::with_capacity(FIXTURE_NAMES.len() * dither_cases.len());
     for fixture_name in FIXTURE_NAMES {
-        for (requested_mode, slug) in HARNESS_DITHER_CASES {
+        for (requested_mode, slug) in &dither_cases {
             requests.push(RenderRequest {
                 fixture_name,
-                requested_mode,
+                requested_mode: *requested_mode,
                 output_slug: with_artifact_tag(slug, normalized_tag.as_deref()),
                 gamma: DEFAULT_GAMMA,
                 gamma_slug: "g100",
@@ -43,22 +54,32 @@ pub(crate) fn render_standard_suite_with_tag(
 
 pub(crate) fn render_gamma_sweep() -> Result<Vec<RenderedFixture>> {
     let artifact_tag = current_artifact_tag();
-    render_gamma_sweep_with_tag(artifact_tag.as_deref())
+    let mode_filter = current_dither_filter();
+    render_gamma_sweep_with_options(artifact_tag.as_deref(), mode_filter.as_deref())
 }
 
+#[allow(dead_code)]
 pub(crate) fn render_gamma_sweep_with_tag(
     artifact_tag: Option<&str>,
 ) -> Result<Vec<RenderedFixture>> {
+    render_gamma_sweep_with_options(artifact_tag, None)
+}
+
+fn render_gamma_sweep_with_options(
+    artifact_tag: Option<&str>,
+    mode_filter: Option<&str>,
+) -> Result<Vec<RenderedFixture>> {
     let normalized_tag = sanitize_artifact_tag(artifact_tag);
+    let dither_cases = filtered_dither_cases(mode_filter)?;
 
     let mut requests =
-        Vec::with_capacity(FIXTURE_NAMES.len() * HARNESS_DITHER_CASES.len() * GAMMA_CASES.len());
+        Vec::with_capacity(FIXTURE_NAMES.len() * dither_cases.len() * GAMMA_CASES.len());
     for fixture_name in FIXTURE_NAMES {
-        for (requested_mode, mode_slug) in HARNESS_DITHER_CASES {
+        for (requested_mode, mode_slug) in &dither_cases {
             for (gamma, gamma_slug) in GAMMA_CASES {
                 requests.push(RenderRequest {
                     fixture_name,
-                    requested_mode,
+                    requested_mode: *requested_mode,
                     output_slug: with_artifact_tag(
                         &format!("{mode_slug}_{gamma_slug}"),
                         normalized_tag.as_deref(),
@@ -138,6 +159,59 @@ fn current_artifact_tag() -> Option<String> {
         .and_then(|value| sanitize_artifact_tag(Some(&value)))
 }
 
+fn current_dither_filter() -> Option<String> {
+    std::env::var(HARNESS_DITHER_FILTER_ENV).ok()
+}
+
+pub(crate) fn selected_harness_dither_cases() -> Result<Vec<(DitherMode, &'static str)>> {
+    let mode_filter = current_dither_filter();
+    filtered_dither_cases(mode_filter.as_deref())
+}
+
+fn filtered_dither_cases(raw_filter: Option<&str>) -> Result<Vec<(DitherMode, &'static str)>> {
+    let Some(raw_filter) = raw_filter.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(HARNESS_DITHER_CASES.to_vec());
+    };
+
+    let requested_slugs = raw_filter
+        .split([',', ' '])
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| value.to_ascii_lowercase())
+        .collect::<Vec<_>>();
+
+    anyhow::ensure!(
+        !requested_slugs.is_empty(),
+        "`{HARNESS_DITHER_FILTER_ENV}` must include at least one dither slug"
+    );
+
+    let mut selected = Vec::new();
+    for requested_slug in requested_slugs {
+        let Some(&(mode, slug)) = HARNESS_DITHER_CASES
+            .iter()
+            .find(|(_, slug)| slug.eq_ignore_ascii_case(&requested_slug))
+        else {
+            let supported = HARNESS_DITHER_CASES
+                .iter()
+                .map(|(_, slug)| *slug)
+                .collect::<Vec<_>>()
+                .join(", ");
+            anyhow::bail!(
+                "Unsupported dither slug `{requested_slug}` in `{HARNESS_DITHER_FILTER_ENV}`; supported values: {supported}"
+            );
+        };
+
+        if selected
+            .iter()
+            .all(|(existing_mode, _)| *existing_mode != mode)
+        {
+            selected.push((mode, slug));
+        }
+    }
+
+    Ok(selected)
+}
+
 fn with_artifact_tag(output_slug: &str, artifact_tag: Option<&str>) -> String {
     match sanitize_artifact_tag(artifact_tag) {
         Some(tag) => format!("{output_slug}_{tag}"),
@@ -213,6 +287,24 @@ mod tests {
             with_artifact_tag("floyd-steinberg", None),
             "floyd-steinberg"
         );
+    }
+
+    #[test]
+    fn filtered_dither_cases_supports_single_mode_and_deduplicates() -> Result<()> {
+        let filtered = filtered_dither_cases(Some(" blue-noise, BLUE-NOISE "))?;
+
+        assert_eq!(filtered, vec![(DitherMode::BlueNoise, "blue-noise")]);
+        Ok(())
+    }
+
+    #[test]
+    fn filtered_dither_cases_rejects_unknown_mode() {
+        let err = filtered_dither_cases(Some("unknown-mode"))
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("Unsupported dither slug `unknown-mode`"));
+        assert!(err.contains("blue-noise"));
     }
 
     #[test]

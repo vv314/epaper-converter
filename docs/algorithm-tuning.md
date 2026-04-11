@@ -22,6 +22,8 @@
 - 若要保留某轮调优结果并与旧版本并排比较，运行前设置 `EPAPER_HARNESS_TAG`，例如 `EPAPER_HARNESS_TAG=v2 cargo test harness_regenerates_cover_png_outputs -- --ignored`。
 - 设置标识后，批量产物会追加后缀，如 `gradient.cover.bayer_v2.png`、`tree.cover.yliluoma_v2.png`。
 - `EPAPER_HARNESS_TAG` 会被规范化：字母统一转小写，空格与 `/`、`.` 会转成 `_`，例如 `Lab FastPath` 会落盘为 `lab_fastpath`。
+- 若只调单个算法，可额外设置 `EPAPER_HARNESS_MODES` 过滤模式，例如 `EPAPER_HARNESS_MODES=blue-noise EPAPER_HARNESS_TAG=bn32 cargo test harness_regenerates_cover_png_outputs -- --ignored`，这样只会生成 `blue-noise` 相关产物。
+- `EPAPER_HARNESS_MODES` 支持用逗号或空格传多个 slug，例如 `EPAPER_HARNESS_MODES="blue-noise clustered-dot"`；合法值与 `--dither` slug 一致。
 - 未设置 `EPAPER_HARNESS_TAG` 时，harness 只会覆盖当前默认文件名，不会再全量清空 `output/`；已存在的其他版本产物会被保留。
 - `gamma sweep` 同样支持该标识，例如 `EPAPER_HARNESS_TAG=lab cargo test harness_scans_gamma_candidates_and_prints_leaderboard -- --ignored`，输出形如 `gradient.cover.bayer_g100_lab.png`。
 
@@ -62,3 +64,4 @@
 - 重新生成一批对比图前，可先清空 `output/`，避免历史结果干扰判断。
 - 若需长期保留某轮算法对比结果，应通过明确的 `算法迭代标识` 区分，而不是覆盖旧文件。
 - 测试 harness 已支持并行生成，适合批量扫描参数；若仅验证单个改动，优先缩小夹具和参数范围，避免无意义地跑满整套组合。
+- 单算法调优时，优先配合 `EPAPER_HARNESS_MODES=<slug>` 使用 harness，避免误生成其他模式的对比产物。

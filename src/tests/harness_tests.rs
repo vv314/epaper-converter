@@ -1,18 +1,17 @@
-use super::harness::{
-    self, FIXTURE_NAMES, GAMMA_CASES, HARNESS_DITHER_CASES, TARGET_HEIGHT, TARGET_WIDTH,
-};
+use super::harness::{self, FIXTURE_NAMES, GAMMA_CASES, TARGET_HEIGHT, TARGET_WIDTH};
 use crate::cli::DitherMode;
 
 #[test]
 #[ignore = "Generates `output/` preview fixtures for manual algorithm review"]
 fn harness_regenerates_cover_png_outputs() -> anyhow::Result<()> {
     let rendered = harness::render_standard_suite()?;
+    let selected_modes = harness::selected_harness_dither_cases()?;
 
     println!("\n{}", harness::format_suite_report(&rendered));
 
     assert_eq!(
         rendered.len(),
-        FIXTURE_NAMES.len() * HARNESS_DITHER_CASES.len(),
+        FIXTURE_NAMES.len() * selected_modes.len(),
         "expected harness to render every fixture/mode combination"
     );
     assert!(rendered.iter().all(|case| case.output_path.is_file()));
@@ -25,6 +24,9 @@ fn harness_regenerates_cover_png_outputs() -> anyhow::Result<()> {
             .and_then(|name| name.to_str())
             .is_some_and(|name| name.starts_with(case.fixture_name))
     }));
+    assert!(rendered.iter().all(|case| selected_modes
+        .iter()
+        .any(|(mode, _)| *mode == case.requested_mode)));
 
     Ok(())
 }
@@ -221,6 +223,7 @@ fn harness_detects_regression_from_snapshot_text() -> anyhow::Result<()> {
 #[ignore = "Scans gamma candidates and prints a best-per-fixture leaderboard"]
 fn harness_scans_gamma_candidates_and_prints_leaderboard() -> anyhow::Result<()> {
     let rendered = harness::render_gamma_sweep()?;
+    let selected_modes = harness::selected_harness_dither_cases()?;
     let baseline = harness::build_baseline_snapshot(&rendered);
     let comparisons = harness::compare_against_baseline(&rendered, &baseline)?;
 
@@ -232,7 +235,7 @@ fn harness_scans_gamma_candidates_and_prints_leaderboard() -> anyhow::Result<()>
 
     assert_eq!(
         rendered.len(),
-        FIXTURE_NAMES.len() * HARNESS_DITHER_CASES.len() * GAMMA_CASES.len(),
+        FIXTURE_NAMES.len() * selected_modes.len() * GAMMA_CASES.len(),
         "expected gamma sweep to cover every fixture/mode/gamma combination"
     );
     assert!(rendered.iter().all(|case| case.output_path.is_file()));

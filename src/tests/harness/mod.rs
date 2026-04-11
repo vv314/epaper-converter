@@ -47,6 +47,10 @@ fn prune_output_dir_for_requests(requests: &[RenderRequest]) -> Result<()> {
     Ok(())
 }
 
+pub(super) fn selected_harness_dither_cases() -> Result<Vec<(DitherMode, &'static str)>> {
+    render::selected_harness_dither_cases()
+}
+
 fn output_path_for_request(fixture_name: &str, output_slug: &str) -> PathBuf {
     output_dir().join(format!("{fixture_name}.cover.{output_slug}.png"))
 }

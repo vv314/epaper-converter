@@ -5,7 +5,7 @@ use super::palette::{nearest_color, warm_up_color_lut};
 
 const BLUE_NOISE_SIZE: usize = 32;
 const BLUE_NOISE_PIXELS: usize = BLUE_NOISE_SIZE * BLUE_NOISE_SIZE;
-const BLUE_NOISE_STRENGTH: i32 = 44;
+const BLUE_NOISE_STRENGTH: i32 = 32;
 
 // 该 mask 由离线的 void-and-cluster 阈值图生成器预计算得到，运行时只做平铺查表。
 // 使用 32x32 周期性高斯能量场（sigma≈1.9）和 12.5% 原型密度，
