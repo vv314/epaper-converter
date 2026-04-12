@@ -3,6 +3,7 @@
 ## 开发约定
 
 - 项目结构应尽量符合 Rust 社区最佳实践，优先采用社区常见的目录组织、命名方式和测试布局。
+- `skills/epaper-image-converter` 是提供给终端内 agent（例如 `openclaw`、`picoclaw`）调用的辅助 skill，不属于本项目的工程实现或工程规范入口；涉及项目代码时不要将其视为工程 skill。
 
 ## 测试约定
 

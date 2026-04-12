@@ -4,3 +4,4 @@ PATH = "/Users/bytedance/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/b
 [alias]
 build-linux-arm64 = "zigbuild --release --target aarch64-unknown-linux-gnu"
 build-linux-arm64-musl = "zigbuild --release --target aarch64-unknown-linux-musl"
+generate-output = "test harness_regenerates_cover_png_outputs -- --ignored"

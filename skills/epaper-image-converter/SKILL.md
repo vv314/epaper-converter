@@ -3,15 +3,21 @@ name: epaper-image-converter
 description: Convert and display images for Waveshare 7.3inch e-Paper E by calling the bundled Rust binary epaper_converter.
 ---
 
-# E-Paper Image Converter
+# Skill 文件清单
 
 这是一个面向 `Waveshare 7.3inch e-Paper E`（ACeP 六色）面板的树莓派 skill，提供图像处理、格式检查与刷屏显示能力。
 
-## 当前组成
+## Skill 清单
 
-- `scripts/epaper_converter`：核心图像预处理 CLI 工具
-- `scripts/show_on_screen.py`：负责将预处理后的数据推送到硬件的刷屏脚本
-- `test_when_ready.sh`：基础自检脚本
+```text
+.
+├── SKILL.md                 # skill 说明文件
+├── test_when_ready.sh       # 基础自检脚本
+├── assets/test_gradient.jpg # 示例测试图片
+└── scripts/
+    ├── epaper_converter     # 核心图像预处理 CLI 工具
+    └── show_on_screen.py    # 将预处理结果推送到硬件的刷屏脚本
+```
 
 ## 目标硬件与数据格式
 
