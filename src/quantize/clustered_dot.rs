@@ -13,7 +13,7 @@ const CLUSTERED_DOT_8X8: [[u8; 8]; 8] = [
     [42, 56, 62, 54, 23, 7, 5, 17],
     [32, 40, 52, 38, 31, 21, 19, 29],
 ];
-const CLUSTERED_DOT_STRENGTH: i32 = 52;
+const CLUSTERED_DOT_STRENGTH: i32 = 38;
 
 #[inline(always)]
 fn clustered_dot_bias(threshold: u8) -> i32 {
